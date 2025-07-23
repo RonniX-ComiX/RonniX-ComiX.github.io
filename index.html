@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+	<link rel="shortcut icon" href="favicons/favicon.ico">
+	<link rel="icon" type="image/png" href="favicons/favicon-32x32.png" sizes="32x32">
+	<link rel="icon" type="image/png" href="favicons/favicon-96x96.png" sizes="96x96">
+	<link rel="apple-touch-icon" sizes="180x180" href="favicons/apple-touch-icon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LamaZ Game Studio - TheLuigiplayer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@300;400;500;700&display=swap');
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #1a1a2e;
+            color: #e6e6e6;
+        }
+        
+        .retro-font {
+            font-family: 'Press Start 2P', cursive;
+        }
+        
+        .social-icon {
+			transition: transform 0.3s ease, color 0.3s ease, filter 0.3s ease;
+			will-change: transform, color, filter;
+		}
+
+		.social-icon:hover {
+			transform: scale(1.1) rotate(1deg);
+			filter: brightness(1.2);
+		}
+        
+        .game-card {
+			transition: transform 0.4s ease, box-shadow 0.4s ease;
+			will-change: transform, box-shadow;
+		}
+
+		.game-card:hover {
+			transform: translateY(-5px) scale(1.02);
+			box-shadow: 0 20px 30px rgba(0, 0, 0, 0.35);
+		}
+        
+        .divider {
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #4cc9f0, transparent);
+        }
+		
+		.nav-link {
+            position: relative;
+        }
+ 
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: 0;
+            left: 0;
+            background-color: #00FFFF;
+            transition: width 0.3s ease;
+        }
+ 
+        .nav-link:hover::after {
+            width: 100%;
+        }
+		
+		.icons8-gamejolt { 
+			display: inline-block;
+			width: 1.1em;
+			height: 1.1em;
+			vertical-align: middle;
+			background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciICB2aWV3Qm94PSIwIDAgNDkgNDgiIHdpZHRoPSI0OHB4IiBoZWlnaHQ9IjQ4cHgiIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIj48cmVjdCB3aWR0aD0iMiIgaGVpZ2h0PSIyIiB4PSIxNC4yNTUiIHk9IjQwIiBmaWxsPSIjZWVlIi8+PHBhdGggZmlsbD0iI2VlZSIgZD0ibSAxNi4yNTUsOCB2IDQgaCAtMiB2IDQgaCAtMiB2IDQgaCAtMiB2IDQgaCAtMiB2IDQgaCAxMiB2IDQgaCAtMiB2IDQgaCAtMiB2IDQgaCAyIHYgLTIgaCAyIHYgLTIgaCAyIHYgLTIgaCAyIHYgLTIgaCAyIHYgLTIgaCAyIHYgLTIgaCAyIHYgLTIgaCAyIHYgLTIgaCAyIHYgLTIgaCAyIHYgLTIgaCAyIHYgLTIgaCAtNiB2IC0yIGggMiB2IC0yIGggMiB2IC0yIGggMiB2IC0yIGggMiBWIDggWiIvPjxwYXRoIGZpbGw9IiMwMDdiNmIiIGQ9Im0gMjYuMjU1LDIyIHYgLTQgaCAyIHYgLTIgaCAyIHYgLTIgaCAyIHYgLTIgaCAtMTQgdiA0IGggLTIgdiA0IGggLTIgdiA0IGggMTAgdiA0IGggMiB2IC0yIGggMiB2IC0yIGggMiB2IC0yIHoiLz48cGF0aCBmaWxsPSIjOWNlZDAwIiBkPSJtIDI4LjI1NSwyMiB2IDQgaCAtMiB2IDIgaCAtMiB2IC00IGggMiB2IC0yIHoiLz48cmVjdCB3aWR0aD0iMiIgaGVpZ2h0PSIyIiB4PSIyMi4yNTUiIHk9IjIyIiBmaWxsPSIjOWNlZDAwIi8+PHJlY3Qgd2lkdGg9IjIiIGhlaWdodD0iMiIgeD0iMTguMjU1IiB5PSIyMiIgZmlsbD0iIzljZWQwMCIvPjxyZWN0IHdpZHRoPSIyIiBoZWlnaHQ9IjIiIHg9IjE0LjI1NSIgeT0iMjIiIGZpbGw9IiM5Y2VkMDAiLz48cmVjdCB3aWR0aD0iMiIgaGVpZ2h0PSIyIiB4PSIxNi4yNTUiIHk9IjIwIiBmaWxsPSIjOWNlZDAwIi8+PHJlY3Qgd2lkdGg9IjIiIGhlaWdodD0iMiIgeD0iMjAuMjU1IiB5PSIyMCIgZmlsbD0iIzljZWQwMCIvPjxyZWN0IHdpZHRoPSIyIiBoZWlnaHQ9IjIiIHg9IjI0LjI1NSIgeT0iMjAiIGZpbGw9IiM5Y2VkMDAiLz48cGF0aCBkPSJtIDguMjU1LDI4IHYgMiBoIDEyIHYgLTIuMDMgeiIvPjxwYXRoIGQ9Im0gMzguMjU1LDE4IGggNCB2IDIgaCAtMiB2IDIgaCAtMiB2IDIgaCAtMiB2IDIgaCAtMiB2IDIgaCAtMiB2IDIgaCAtMiB2IDIgaCAtMiB2IDIgaCAtMiB2IDIgaCAtMiB2IDIgaCAtMiB2IDIgaCAtMiB2IDIgaCAtNCB2IC0yIGggMiB2IC0yIGggMiB2IC0yIGggMiB2IC0yIGggMiB2IC0yIGggMiB2IC0yIGggMiB2IC0yIGwgMiwtMC4wMyBWIDI2IGggMiB2IC0yIGggMiB2IC0yIGggMiB2IC0yIGggMiB6Ii8+PHBhdGggZD0ibSAzNi4yNTUsMTggdiAtMiBoIDIgdiAtMiBoIDIgdiAtMiBoIDIgdiAtMiBoIDIgViA4IGggLTQgdiAyIGggLTIgdiAyIGggLTIgdiAyIGggLTIgdiAyIGggLTIgdiAyIHoiLz48L3N2Zz4=') center center no-repeat;
+			background-size: contain;
+		}
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-gray-900 sticky top-0 z-50 shadow-lg">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <img src="lamaz.png" alt="LamaZ Logo" class="h-12 w-auto">
+                <span class="text-xl font-bold text-cyan-400 retro-font hidden md:block">LamaZ Game Studio</span>
+            </div>
+ 
+            <div class="hidden md:flex space-x-8">
+                <a href="#about" class="text-white hover:text-cyan-400 nav-link">About</a>
+                <a href="#games" class="text-white hover:text-cyan-400 nav-link">Games</a>
+                <a href="#projects" class="text-white hover:text-cyan-400 nav-link">Other Projects</a>
+                <a href="#contact" class="text-white hover:text-cyan-400 nav-link">Contact</a>
+            </div>
+ 
+            <button class="md:hidden text-white focus:outline-none" id="mobile-menu-button">
+                <i class="fas fa-bars text-2xl"></i>
+            </button>
+        </div>
+ 
+        <!-- Mobile Menu -->
+        <div class="md:hidden hidden bg-gray-800" id="mobile-menu">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 flex flex-col">
+                <a href="#about" class="text-white hover:bg-gray-700 block px-3 py-2 rounded-md">About</a>
+                <a href="#games" class="text-white hover:bg-gray-700 block px-3 py-2 rounded-md">Games</a>
+                <a href="#projects" class="text-white hover:bg-gray-700 block px-3 py-2 rounded-md">Other Projects</a>
+                <a href="#contact" class="text-white hover:bg-gray-700 block px-3 py-2 rounded-md">Contact</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="py-20 px-6 text-center bg-gradient-to-b from-gray-900 to-gray-800">
+        <div class="container mx-auto">
+            <img src="TheLuigiplayer.png" alt="TheLuigiplayer Logo" width="512" class="mx-auto h-1080 mb-8">
+            <h1 class="retro-font text-xl md:text-xl text-cyan-400 mb-4">German Game Developer, Modder & Pixel Artist since 2011</h1>
+            <div class="flex justify-center space-x-4">
+                <a href="#games" class="px-6 py-3 border border-cyan-600 hover:bg-cyan-600/20 rounded-lg font-medium transition">View Games</a>
+                <a href="#contact" class="px-6 py-3 border border-cyan-600 hover:bg-cyan-600/20 rounded-lg font-medium transition">Contact Me</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-12">
+        <!-- About Section -->
+        <section id="about" class="mb-16">
+            <h2 class="retro-font text-3xl text-cyan-400 mb-6 text-center">About Me</h2>
+            <div class="flex flex-col md:flex-row gap-8 items-center">
+                <div class="flex-1">
+                    <p class="text-gray-300 mb-6 leading-relaxed text-center">
+                        I'm the Founder of LamaZ Game Studio, which is a collaboration between my brother KG20 & myself to create more Content & our own Games, developed in Engines like Godot & Unity.
+                    </p>
+                    <p class="text-gray-300 mb-6 leading-relaxed text-center">
+                        With over a decade of experience in game development, modding, and pixel art, I'm passionate about creating immersive gaming experiences and sharing them with the community.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Divider -->
+        <div class="divider my-12"></div>
+
+        <!-- Games Section -->
+        <section id="games" class="mb-16">
+            <h2 class="retro-font text-3xl text-cyan-400 mb-8 text-center">My Games</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- CA-TO Game Card -->
+                <div class="game-card bg-gray-800 rounded-lg overflow-hidden shadow-lg">
+                    <a href="https://ca-to.jimdo.com/" target="_blank" class="block">
+                        <img src="cato.jpg" alt="Cast Away - The Oddysee" class="w-full h-48 object-cover">
+                        <div class="p-6">
+                            <h3 class="text-xl font-bold text-cyan-400 mb-2">Cast Away - The Oddysee</h3>
+                            <p class="text-gray-300 mb-4">Follow the story of the shipwrecked helmsman John Maynard as he joins a resistance in order to defeat the demon king and escape a mysterious island</p>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm bg-gray-700 px-3 py-1 rounded-full text-gray-300">RPG Maker XP</span>
+                                <span class="text-sm text-cyan-400">View Website<i class="fas fa-external-link-alt ml-1"></i></span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Divider -->
+        <div class="divider my-12"></div>
+
+        <!-- Projects Section -->
+        <section id="projects" class="mb-16">
+            <h2 class="retro-font text-3xl text-cyan-400 mb-8 text-center">Other Projects</h2>
+            
+            <h3 class="text-2xl font-bold text-gray-300 mb-6">Other games I've worked on:</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+                <!-- MoleMan Game Card -->
+                <div class="game-card bg-gray-800 rounded-lg overflow-hidden shadow-lg">
+                    <a href="https://gamejolt.com/games/moleman/424769" target="_blank" class="block">
+                        <img src="moleman.jpg" alt="MoleMan" class="w-full h-48 object-cover">
+                        <div class="p-6">
+                            <h3 class="text-xl font-bold text-cyan-400 mb-2">MoleMan</h3>
+                            <p class="text-gray-300 mb-4">This 2D Sidescrolling Autorunner is about the superhero MoleMan who helps finding love for blind moles</p>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm bg-gray-700 px-3 py-1 rounded-full text-gray-300">Unity</span>
+                                <span class="text-sm text-cyan-400">View on GameJolt<i class="fas fa-external-link-alt ml-1"></i></span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+				
+				<!-- Nice to NO you Game Card -->
+                <div class="game-card bg-gray-800 rounded-lg overflow-hidden shadow-lg">
+                    <a href="https://store.steampowered.com/app/1413890/Nice_to_NO_you/" target="_blank" class="block">
+                        <img src="ntny.jpg" alt="Nice to NO you" class="w-full h-48 object-cover">
+                        <div class="p-6">
+                            <h3 class="text-xl font-bold text-cyan-400 mb-2">Nice to NO you</h3>
+                            <p class="text-gray-300 mb-4">A dystopian dialogue game where you decide the fate of individuals and the world </p>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm bg-gray-700 px-3 py-1 rounded-full text-gray-300">Godot</span>
+                                <span class="text-sm text-cyan-400">View on Steam<i class="fas fa-external-link-alt ml-1"></i></span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <h3 class="text-2xl font-bold text-gray-300 mb-6">Mods:</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- SuperTools Mod Card -->
+                <div class="game-card bg-gray-800 rounded-lg overflow-hidden shadow-lg">
+                    <a href="https://www.curseforge.com/minecraft/mc-mods/super-tools" target="_blank" class="block">
+                        <img src="supertools.jpg" alt="SuperTools MC Mod" class="w-full h-48 object-cover">
+                        <div class="p-6">
+                            <h3 class="text-xl font-bold text-cyan-400 mb-2">SuperTools</h3>
+                            <p class="text-gray-300 mb-4">Enhance your Minecraft experience with new tools and armors from already existing materials</p>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm bg-gray-700 px-3 py-1 rounded-full text-gray-300">Minecraft</span>
+                                <span class="text-sm text-cyan-400">View on Curseforge<i class="fas fa-external-link-alt ml-1"></i></span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+
+                <!-- More Ores in ONE Mod Card -->
+                <div class="game-card bg-gray-800 rounded-lg overflow-hidden shadow-lg">
+                    <a href="https://www.curseforge.com/minecraft/mc-mods/more-ores-in-one" target="_blank" class="block">
+                        <img src="moio.jpg" alt="More Ores in ONE" class="w-full h-48 object-cover">
+                        <div class="p-6">
+                            <h3 class="text-xl font-bold text-cyan-400 mb-2">More Ores in ONE</h3>
+                            <p class="text-gray-300 mb-4">Expand your mining possibilities in the Overworld, Nether & End dimensions</p>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm bg-gray-700 px-3 py-1 rounded-full text-gray-300">Minecraft</span>
+                                <span class="text-sm text-cyan-400">View on Curseforge<i class="fas fa-external-link-alt ml-1"></i></span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Divider -->
+        <div class="divider my-12"></div>
+
+        <!-- Contact Section -->
+        <section id="contact" class="mb-16">
+            <h2 class="retro-font text-3xl text-cyan-400 mb-8 text-center">Contact Me</h2>
+            <div class="flex justify-center space-x-6">
+                <a href="https://bsky.app/profile/theluigiplayer.lamaz.dev" title="Bluesky" target="_blank" class="social-icon text-3xl text-blue-600 hover:text-blue-500 flex items-center">
+                    <i class="fa-brands fa-bluesky"></i>
+                </a>
+                <a href="https://mastodon.gamedev.place/@TheLuigiplayer" title="Mastodon" target="_blank" class="social-icon text-3xl text-purple-800 hover:text-purple-700 flex items-center">
+                    <i class="fab fa-mastodon"></i>
+                </a>
+                <a href="mailto:theluigiplayer@lamaz.dev" title="Mail" class="social-icon text-3xl text-red-400 hover:text-red-300 flex items-center">
+                    <i class="fas fa-envelope"></i>
+                </a>
+                <a href="https://www.reddit.com/user/TheLuigiplayer/" title="Reddit" target="_blank" class="social-icon text-3xl text-orange-500 hover:text-orange-400 flex items-center">
+                    <i class="fab fa-reddit"></i>
+                </a>
+				<a href="https://steamcommunity.com/id/theluigiplayer/" title="Steam" target="_blank" class="social-icon text-3xl text-gray-300 hover:text-gray-200 flex items-center">
+                    <i class="fab fa-steam"></i>
+                </a>
+				<a href="https://lamaz.itch.io/" title="Itch Io" target="_blank" class="social-icon text-3xl text-pink-500 hover:text-pink-400 flex items-center">
+                    <i class="fab fa-itch-io"></i>
+                </a>
+				<a href="https://gamejolt.com/@TheLuigiplayer" title="Game Jolt" target="_blank" class="social-icon text-3xl hover:text-white flex items-center">
+                    <i class="icons8-gamejolt"></i>
+                </a>
+            </div>
+            <p class="text-center mt-8 text-gray-400">
+                Feel free to reach out for feedback on my games, collaborations or questions!
+            </p>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 py-8 px-6 border-t border-gray-800">
+		<div class="container mx-auto text-center">
+			<div class="flex justify-center items-center gap-x-4 mb-4">
+				<img src="lamaz.png" alt="LamaZ Logo" class="h-10 w-auto">
+				<div>
+					<p class="text-cyan-400 font-bold retro-font">LamaZ Game Studio</p>
+					<p class="text-gray-400 text-sm">© 2025 LamaZ Game Studio - TheLuigiplayer</p>
+				</div>
+			</div>
+		</div>
+	</footer>
+
+    <script>
+        // Mobile menu toggle
+        document.getElementById('mobile-menu-button').addEventListener('click', function() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        });
+ 
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+ 
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+ 
+                if (targetElement) {
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 80,
+                        behavior: 'smooth'
+                    });
+ 
+                    // Close mobile menu if open
+                    const mobileMenu = document.getElementById('mobile-menu');
+                    if (!mobileMenu.classList.contains('hidden')) {
+                        mobileMenu.classList.add('hidden');
+                    }
+                }
+            });
+        });
+ 
+        // Add shadow to navbar on scroll
+        window.addEventListener('scroll', function() {
+            const nav = document.querySelector('nav');
+            if (window.scrollY > 10) {
+                nav.classList.add('shadow-xl');
+            } else {
+                nav.classList.remove('shadow-xl');
+            }
+        });
+    </script>
+</body>
+</html>
