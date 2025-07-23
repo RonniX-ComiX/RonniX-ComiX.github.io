@@ -2,11 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-	<link rel="shortcut icon" href="favicons/favicon.ico">
-	<link rel="icon" type="image/png" href="favicons/favicon-32x32.png" sizes="32x32">
-	<link rel="icon" type="image/png" href="favicons/favicon-96x96.png" sizes="96x96">
-	<link rel="apple-touch-icon" sizes="180x180" href="favicons/apple-touch-icon.png">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	  <link rel="apple-touch-icon" sizes="180x180" href="favicons/apple-touch-icon.png">
+	  <link rel="icon" type="image/png" sizes="32x32" href="favicons/favicon-32x32.png">
+	  <link rel="icon" type="image/png" sizes="16x16" href="favicons/favicon-16x16.png">
+	  <link rel="icon" type="image/png" sizes="192x192" href="favicons/android-chrome-192x192.png">
+	  <link rel="icon" type="image/png" sizes="512x512" href="favicons/android-chrome-512x512.png">
+	  <link rel="shortcut icon" href="favicons/favicon.ico">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RonniX ComiX</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
@@ -81,7 +83,7 @@
     <nav class="bg-black sticky top-0 z-50 shadow-lg border-b border-red-600">
         <div class="container mx-auto px-4 py-3 flex justify-between items-center">
             <div class="flex items-center space-x-2">
-                <img src="lamaz.png" alt="LamaZ Logo" class="h-12 w-auto">
+                <img src="images/ronnix_logo.png" alt="RonniX Logo" class="h-12 w-auto">
                 <span class="text-xl font-bold text-white retro-font hidden md:block">RonniX ComiX</span>
             </div>
  
@@ -111,11 +113,11 @@
     <!-- Hero Section -->
     <header class="py-20 px-6 text-center bg-gradient-to-b from-black to-red-900/50">
         <div class="container mx-auto">
-            <img src="RonniX.png" alt="RonniX Logo" width="512" class="mx-auto h-1080 mb-8">
-            <h1 class="retro-font text-xl md:text-xl text-cyan-400 mb-4">Platzhalter Text</h1>
+            <img src="images/RonniX.png" alt="RonniX Logo" width="512" class="mx-auto h-1080 mb-8">
+            <h1 class="retro-font text-xl md:text-xl text-white mb-4">Platzhalter Text</h1>
             <div class="flex justify-center space-x-4">
-                <a href="#games" class="px-6 py-3 border border-cyan-600 hover:bg-cyan-600/20 rounded-lg font-medium transition">Spiele ansehen</a>
-                <a href="#contact" class="px-6 py-3 border border-cyan-600 hover:bg-cyan-600/20 rounded-lg font-medium transition">Kontaktiere Mich</a>
+                <a href="#games" class="px-6 py-3 border border-red-600 hover:bg-black rounded-lg font-medium transition">Spiele ansehen</a>
+                <a href="#contact" class="px-6 py-3 border border-red-600 hover:bg-black rounded-lg font-medium transition">Kontaktiere Mich</a>
             </div>
         </div>
     </header>
@@ -124,7 +126,7 @@
     <main class="container mx-auto px-6 py-12">
         <!-- About Section -->
         <section id="about" class="mb-16">
-            <h2 class="retro-font text-3xl text-cyan-400 mb-6 text-center">Über Mich</h2>
+            <h2 class="retro-font text-3xl text-white-400 mb-6 text-center">Über Mich</h2>
             <div class="flex flex-col md:flex-row gap-8 items-center">
                 <div class="flex-1">
                     <p class="text-gray-300 mb-6 leading-relaxed text-center">
@@ -148,12 +150,12 @@
 
         <!-- Games Section -->
         <section id="games" class="mb-16">
-            <h2 class="retro-font text-3xl text-cyan-400 mb-8 text-center">Spiele</h2>
+            <h2 class="retro-font text-3xl text-white-400 mb-8 text-center">Spiele</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <!-- CA-TO Game Card -->
                 <div class="game-card bg-black rounded-lg overflow-hidden shadow-lg border border-red-600/30 hover:border-red-500">
                     <a href="https://ca-to.jimdo.com/" target="_blank" class="block">
-                        <img src="cato.jpg" alt="Cast Away - The Oddysee" class="w-full h-48 object-cover">
+                        <img src="images/cato.jpg" alt="Cast Away - The Oddysee" class="w-full h-48 object-cover">
                         <div class="p-6">
                             <h3 class="text-xl font-bold text-red-600 mb-2">Cast Away - The Oddysee</h3>
                             <p class="text-gray-300 mb-4">Follow the story of the shipwrecked helmsman John Maynard as he joins a resistance in order to defeat the demon king and escape a mysterious island</p>
@@ -172,7 +174,7 @@
 
         <!-- Projects Section -->
         <section id="projects" class="mb-16">
-            <h2 class="retro-font text-3xl text-cyan-400 mb-8 text-center">Andere Projekte</h2>
+            <h2 class="retro-font text-3xl text-white-400 mb-8 text-center">Andere Projekte</h2>
 
         </section>
 
@@ -181,7 +183,7 @@
 
         <!-- Contact Section -->
         <section id="contact" class="mb-16">
-            <h2 class="retro-font text-3xl text-cyan-400 mb-8 text-center">Kontaktiere Mich</h2>
+            <h2 class="retro-font text-3xl text-white-400 mb-8 text-center">Kontaktiere Mich</h2>
             <div class="flex justify-center space-x-6">
                 <a href="https://mastodon.gamedev.place/@TheLuigiplayer" title="Instagram" target="_blank" class="social-icon text-3xl text-pink-800 hover:text-pink-700 flex items-center">
                     <i class="fab fa-instagram"></i>
@@ -203,9 +205,9 @@
     <footer class="bg-black py-8 px-6 border-t border-red-600">
 		<div class="container mx-auto text-center">
 			<div class="flex justify-center items-center gap-x-4 mb-4">
-				<img src="lamaz.png" alt="LamaZ Logo" class="h-10 w-auto">
+				<img src="images/ronnix_logo.png" alt="RonniX Logo" class="h-10 w-auto">
 				<div>
-					<p class="text-cyan-400 font-bold retro-font">RonniX ComiX</p>
+					<p class="text-white-400 font-bold retro-font">RonniX ComiX</p>
 					<p class="text-gray-400 text-sm">© 2025 RonniX ComiX</p>
 				</div>
 			</div>
