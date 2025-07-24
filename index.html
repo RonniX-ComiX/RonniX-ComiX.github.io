@@ -26,6 +26,12 @@
             background-color: #0a0a0a;
             color: #ffffff;
         }
+		
+		.hero-font {
+            font-family: 'Bangers', cursive;
+            letter-spacing: 1px;
+            text-shadow: 2px 2px 0 #000000;
+        }
         
         .retro-font {
             font-family: 'Bangers', cursive;
@@ -76,6 +82,30 @@
         .nav-link:hover::after {
             width: 100%;
         }
+				
+		.progress-bar {
+			height: 30px;
+			background-color: #e5e7eb;
+			border-radius: 15px;
+			overflow: hidden;
+			max-width: 400px;
+		}
+
+		.progress-fill {
+			height: 100%;
+			background: linear-gradient(90deg, #ff0000, #8b0000);
+			transition: width 0.5s ease-in-out;
+			position: relative;
+		}
+
+		.progress-fill-text {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			color: white;
+			font-weight: bold;
+		}
     </style>
 </head>
 <body class="min-h-screen">
@@ -116,7 +146,7 @@
     <header class="py-20 px-6 text-center bg-gradient-to-b from-black to-red-900/50">
         <div class="container mx-auto">
             <img src="images/RonniX.png" alt="RonniX Logo" width="512" class="mx-auto h-1080 mb-8">
-            <h1 class="retro-font text-xl md:text-xl text-white mb-4">Platzhalter Text</h1>
+            <h1 class="hero-font text-xl md:text-xl text-white mb-4">Eine Reise durch die Welt der ComiX für Nerds, Sammler und Neueinsteiger.</h1>
             <div class="flex flex-wrap justify-center gap-4">
 				<a href="#comics" class="px-6 py-3 border border-red-600 hover:bg-black rounded-lg font-medium transition">ComiX ansehen</a>
 				<a href="#books" class="px-6 py-3 border border-red-600 hover:bg-black rounded-lg font-medium transition">Bücher ansehen</a>
@@ -130,24 +160,34 @@
     <main class="container mx-auto px-6 py-12">
         <!-- About Section -->
         <section id="about" class="mb-16">
-            <h2 class="retro-font text-3xl text-white-400 mb-6 text-center">Über Mich</h2>
-            <div class="flex flex-col md:flex-row gap-8 items-center">
-                <div class="flex-1">
-                    <p class="text-gray-300 mb-6 leading-relaxed text-center">
-                        Eine Reise durch die Welt der ComiX für Nerds, Sammler und Neueinsteiger.
-                    </p>
-                    <p class="text-gray-300 mb-6 leading-relaxed text-center">
-                        Aktueller Stand meiner privaten Comic Bibliothek:
-                    </p>
+			<h2 class="retro-font text-3xl text-white-400 mb-6 text-center">Über Mich</h2>
+			<div class="flex flex-col md:flex-row gap-8 items-center">
+				<div class="flex-1">
 					<p class="text-gray-300 mb-6 leading-relaxed text-center">
-						937/1000
-                    </p>
-					<p class="text-gray-300 mb-6 leading-relaxed text-center">
-						#ronnixcomix
-                    </p>
-                </div>
-            </div>
-        </section>
+					</p>
+					<div class="mb-8 text-center">
+						<h3 class="font-bold text-xl mb-3">Aktueller Stand meiner privaten Comic Bibliothek:</h3>
+						<p id="comic-count" class="mb-3">961/1000</p>
+						<div class="progress-bar mx-auto">
+							<div class="progress-fill" id="progress-fill">
+								<div class="progress-fill-text" id="progress-fill-text"></div>
+							</div>
+						</div>
+					</div>
+					
+					<div class="items-center text-center space-x-2">
+						<span class="mr-1 font-bold">#ronnixcomix</span>
+						<i class="fab fa-x-twitter text-white"></i>
+						<i class="fab fa-instagram text-red-500"></i>
+						<i class="fab fa-facebook text-blue-600"></i>
+						<i class="fab fa-mastodon text-purple-500"></i>
+						<i class="fa-brands fa-bluesky text-blue-500"></i>
+						<i class="fab fa-tiktok text-pink-800"></i>
+						<i class="fa-brands fa-threads text-blue-800"></i>
+					</div>
+				</div>
+			</div>
+		</section>
 		
 		<!-- Divider -->
         <div class="divider my-12"></div>
@@ -208,9 +248,33 @@
                     <i class="fab fa-facebook"></i>
                 </a>
             </div>
-            <p class="text-center mt-8 text-gray-400">
+			<p class="text-center mt-8 text-gray-400">
                 Bei Fragen kannst du dich gerne bei mir melden!
             </p>
+			<div class="md:w-1/3 mx-auto">
+				<form class="space-y-4">
+					<div>
+                        <label for="name" class="block mb-2">Name</label>
+                        <input type="text" id="name" class="w-full px-4 py-2 rounded bg-black text-white border border-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
+                    </div>
+                        
+                    <div>
+                        <label for="email" class="block mb-2">Email</label>
+                        <input type="email" id="email" class="w-full px-4 py-2 rounded bg-black text-white border border-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
+                    </div>
+                        
+                    <div>
+                        <label for="message" class="block mb-2">Nachricht</label>
+                        <textarea id="message" rows="4" class="w-full px-4 py-2 rounded bg-black text-white border border-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"></textarea>
+                    </div>
+                        
+                    <div class="text-center">
+						<button type="submit" class="bg-red-600 hover:bg-red-400 text-white px-6 py-3 rounded-full font-bold transition">
+							Nachricht senden
+						</button>
+					</div>
+                </form>
+            </div>
         </section>
     </main>
 
@@ -222,8 +286,14 @@
 				<div>
 					<p class="text-white-400 font-bold retro-font">RonniX ComiX</p>
 					<p class="text-gray-400 text-sm">© 2025 RonniX ComiX</p>
+					<p class="text-gray-400 text-sm">Alle Rechte vorbehalten.</p>
 				</div>
 			</div>
+				<div class="flex justify-center space-x-6">
+					<a href="#" class="text-white hover:text-red-500 nav-link">Impressum</a>
+					<a href="#" class="text-white hover:text-red-500 nav-link">Datenschutz</a>
+					<a href="#" class="text-white hover:text-red-500 nav-link">AGB</a>
+				</div>
 		</div>
 	</footer>
 
@@ -265,6 +335,16 @@
             } else {
                 nav.classList.remove('shadow-xl');
             }
+        });
+		
+		// Automatically setting the fill of the progressbar on top
+		document.addEventListener('DOMContentLoaded', function() {
+            const comicCount = document.getElementById('comic-count').textContent;
+            const [current, total] = comicCount.split('/').map(Number);
+            const percentage = ((current / total) * 100).toFixed(1);
+
+            document.getElementById('progress-fill').style.width = `${percentage}%`;
+            document.getElementById('progress-fill-text').textContent = `${percentage}%`;
         });
     </script>
 </body>
