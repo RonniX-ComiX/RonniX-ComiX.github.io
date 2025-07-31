@@ -2,143 +2,68 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-	  <link rel="apple-touch-icon" sizes="180x180" href="favicons/apple-touch-icon.png">
-	  <link rel="icon" type="image/png" sizes="32x32" href="favicons/favicon-32x32.png">
-	  <link rel="icon" type="image/png" sizes="16x16" href="favicons/favicon-16x16.png">
-	  <link rel="icon" type="image/png" sizes="192x192" href="favicons/android-chrome-192x192.png">
-	  <link rel="icon" type="image/png" sizes="512x512" href="favicons/android-chrome-512x512.png">
-	  <link rel="shortcut icon" href="favicons/favicon.ico">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RonniX ComiX</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Roboto:wght@300;400;500;700&display=swap');
-        
-        .comic-style {
-            border: 3px solid white;
-            box-shadow: 5px 5px 0 red;
-            transform: rotate(-1deg);
-        }
-        
-        body {
-            font-family: 'Roboto', sans-serif;
-            background-color: #0a0a0a;
-            color: #ffffff;
-        }
-		
-		.hero-font {
-            font-family: 'Bangers', cursive;
-            letter-spacing: 1px;
-            text-shadow: 2px 2px 0 #000000;
-        }
-        
-        .retro-font {
-            font-family: 'Bangers', cursive;
-            letter-spacing: 1px;
-            text-shadow: 2px 2px 0 #ff0000;
-        }
-        
-        .social-icon {
-			transition: transform 0.3s ease, color 0.3s ease, filter 0.3s ease;
-			will-change: transform, color, filter;
-		}
+	<link rel="apple-touch-icon" sizes="180x180" href="favicons/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="favicons/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="favicons/favicon-16x16.png">
+	<link rel="icon" type="image/png" sizes="192x192" href="favicons/android-chrome-192x192.png">
+	<link rel="icon" type="image/png" sizes="512x512" href="favicons/android-chrome-512x512.png">
+	<link rel="shortcut icon" href="favicons/favicon.ico">
+	<title>RonniX ComiX</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+	<link rel="stylesheet" href="style.css">
+	
+		<!-- Basic SEO -->
+	<meta name="description" content="Eine Reise durch die Welt der ComiX für Nerds, Sammler und Neueinsteiger.">
+	<meta name="keywords" content="comics, comix, books, superheroes, superhero, artist, author, editor, writing, RPG Maker, RPG Maker XP, gamedev, indie, indie dev, nerd, nerds, collector">
+	<link rel="canonical" href="https://ronnix-comix.github.io/">
+	
+	<!-- Language / Regional -->
+	<meta name="language" content="EN">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	
+	<!-- Security / Performance hints -->
+	<meta name="referrer" content="no-referrer-when-downgrade">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	
+	<!-- Favicon completeness -->
+	<link rel="manifest" href="favicons/site.webmanifest">
+	<meta name="theme-color" content="#ff3333">
+	
+	<!-- Open Graph -->
+	<meta property="og:title" content="RonniX ComiX">
+	<meta property="og:description" content="Eine Reise durch die Welt der ComiX für Nerds, Sammler und Neueinsteiger.">
+	<meta property="og:image" content="https://ronnix-comix.github.io/images/preview.jpg">
+	<meta property="og:url" content="https://ronnix-comix.github.io/">
+	<meta property="og:type" content="website">
 
-		.social-icon:hover {
-			transform: scale(1.1) rotate(1deg);
-			filter: brightness(1.2);
+	<!-- Twitter-Open Graph -->
+	<meta name="twitter:card" content="summary_large_image">
+	<meta name="twitter:title" content="RonniX ComiX">
+	<meta name="twitter:description" content="Eine Reise durch die Welt der ComiX für Nerds, Sammler und Neueinsteiger.">
+	<meta name="twitter:image" content="https://ronnix-comix.github.io/images/preview.jpg">
+	<meta name="twitter:image:alt" content="Eine Reise durch die Welt der ComiX für Nerds, Sammler und Neueinsteiger.">
+	<meta name="twitter:domain" content="https://ronnix-comix.github.io/">
+	
+	<!-- More SEO -->
+	<script type="application/ld+json">
+	  {
+		"@context": "https://schema.org",
+		"@type": "Person",
+		"name": "RonniX",
+		"url": "https://ronnix-comix.github.io/",
+		"sameAs": [
+		  "https://www.facebook.com/p/RonniX-ComiX-100068056538624/",
+		  "https://www.instagram.com/ronnixcomix"
+		],
+		"jobTitle": "Writer, Author & Editor",
+		"founderOf": {
+		  "@type": "Organization",
+		  "name": "RonniX ComiX",
+		  "url": "https://ronnix-comix.github.io/"
 		}
-        
-        .game-card {
-			transition: transform 0.4s ease, box-shadow 0.4s ease;
-			will-change: transform, box-shadow;
-		}
-
-		.game-card:hover {
-			transform: translateY(-5px) scale(1.02);
-			box-shadow: 0 20px 30px rgba(0, 0, 0, 0.35);
-		}
-        
-        .divider {
-            height: 3px;
-            background: linear-gradient(90deg, transparent, #ff0000, transparent);
-        }
-		
-		.nav-link {
-            position: relative;
-        }
- 
-        .nav-link::after {
-            content: '';
-            position: absolute;
-            width: 0;
-            height: 2px;
-            bottom: 0;
-            left: 0;
-            background-color: #ff0000;
-            transition: width 0.3s ease;
-        }
- 
-        .nav-link:hover::after {
-            width: 100%;
-        }
-				
-		.progress-bar {
-			height: 30px;
-			background-color: #e5e7eb;
-			border-radius: 15px;
-			overflow: hidden;
-			max-width: 400px;
-		}
-
-		.progress-fill {
-			height: 100%;
-			background: linear-gradient(90deg, #ff0000, #8b0000);
-			transition: width 0.5s ease-in-out;
-			position: relative;
-		}
-
-		.progress-fill-text {
-			position: absolute;
-			top: 50%;
-			left: 50%;
-			transform: translate(-50%, -50%);
-			color: white;
-			font-weight: bold;
-		}
-		
-		:root {
-		  --scrollbar-thumb: #e60000;
-		  --scrollbar-track: #1a1a1a;
-		  --scrollbar-width: 8px;
-		}
-		
-		/* Webkit */
-		::-webkit-scrollbar {
-		  width: var(--scrollbar-width);
-		}
-
-		::-webkit-scrollbar-track {
-		  background: var(--scrollbar-track);
-		  border-radius: 10px;
-		}
-
-		::-webkit-scrollbar-thumb {
-		  background: var(--scrollbar-thumb);
-		  border-radius: 10px;
-		  border: 2px solid var(--scrollbar-track);
-		}
-
-		::-webkit-scrollbar-thumb:hover {
-		  background: #ff3333;
-		}
-
-		/* Firefox */
-		html {
-		  scrollbar-width: thin;
-		  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
-		}
-    </style>
+	  }
+	</script>
 </head>
 <body class="min-h-screen">
     <!-- Navigation -->
@@ -349,55 +274,6 @@
 		</div>
 	</footer>
 
-    <script>
-        // Mobile menu toggle
-        document.getElementById('mobile-menu-button').addEventListener('click', function() {
-            const menu = document.getElementById('mobile-menu');
-            menu.classList.toggle('hidden');
-        });
- 
-        // Smooth scrolling for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
- 
-                const targetId = this.getAttribute('href');
-                const targetElement = document.querySelector(targetId);
- 
-                if (targetElement) {
-                    window.scrollTo({
-                        top: targetElement.offsetTop - 80,
-                        behavior: 'smooth'
-                    });
- 
-                    // Close mobile menu if open
-                    const mobileMenu = document.getElementById('mobile-menu');
-                    if (!mobileMenu.classList.contains('hidden')) {
-                        mobileMenu.classList.add('hidden');
-                    }
-                }
-            });
-        });
- 
-        // Add shadow to navbar on scroll
-        window.addEventListener('scroll', function() {
-            const nav = document.querySelector('nav');
-            if (window.scrollY > 10) {
-                nav.classList.add('shadow-xl');
-            } else {
-                nav.classList.remove('shadow-xl');
-            }
-        });
-		
-		// Automatically setting the fill of the progressbar on top
-		document.addEventListener('DOMContentLoaded', function() {
-            const comicCount = document.getElementById('comic-count').textContent;
-            const [current, total] = comicCount.split('/').map(Number);
-            const percentage = ((current / total) * 100).toFixed(1);
-
-            document.getElementById('progress-fill').style.width = `${percentage}%`;
-            document.getElementById('progress-fill-text').textContent = `${percentage}%`;
-        });
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
