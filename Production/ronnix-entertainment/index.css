@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CRITICAL CSS: Prevent White Flash & Base Styles */
+html, body {
+  background-color: #0a0a0a; /* neutral-950 */
+  color: white;
+  margin: 0;
+  padding: 0;
+}
+
+/* Custom Scrollbar to match original design */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+::-webkit-scrollbar-thumb {
+  background: #e60000;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #ff3333;
+}
+
+/* Initial Loader Styles (kept here for build, also in HTML for quick load) */
+.initial-loader {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background-color: #0a0a0a;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+.initial-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(220, 38, 38, 0.3);
+  border-radius: 50%;
+  border-top-color: #dc2626;
+  animation: spin 1s ease-in-out infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Editor Specific Overrides for WYSIWYG Content */
+.editor-content ul {
+    list-style-type: disc !important;
+    padding-left: 1.5rem !important;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+.editor-content ol {
+    list-style-type: decimal !important;
+    padding-left: 1.5rem !important;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+.editor-content li {
+    display: list-item !important;
+    margin-bottom: 0.25rem;
+}
+.editor-content h1, .editor-content h2, .editor-content h3 {
+    font-family: 'Bangers', cursive;
+    color: white;
+    line-height: 1.2;
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+}
+.editor-content h2 { font-size: 2em; color: #dc2626; }
+.editor-content h3 { font-size: 1.5em; color: #f87171; }
+.editor-content blockquote {
+    border-left: 4px solid #dc2626;
+    padding-left: 1rem;
+    margin: 1.5rem 0;
+    color: #d1d5db;
+    font-style: italic;
+    background-color: rgba(23, 23, 23, 0.5);
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+.editor-content a {
+    color: #ef4444;
+    text-decoration: underline;
+    cursor: pointer;
+}
+.editor-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+}
+.editor-content {
+    caret-color: #dc2626;
+}
+.editor-content:empty:before {
+  content: attr(data-placeholder);
+  color: #555;
+  pointer-events: none;
+  display: block;
+}
