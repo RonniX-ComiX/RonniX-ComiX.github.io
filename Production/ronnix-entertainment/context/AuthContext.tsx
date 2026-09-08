@@ -59,24 +59,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return unsubscribe;
   }, []);
 
-  // 2. Realtime Global Logout Listener
-  // Watch for the 'lastLogoutAt' timestamp in Firestore. If it's newer than our login, force logout.
+  // 2. Realtime Global Logout Listener (logoutSignals, mit Legacy-Fallback users)
   useEffect(() => {
     if (!currentUser) return;
 
-    const userDocRef = doc(db, 'users', currentUser.uid);
-    
-    // Keep onSnapshot here as it is a critical security feature (Global SignOut)
-    const unsubscribeSnapshot = onSnapshot(userDocRef, (docSnap) => {
+    const checkSnap = (docSnap: any) => {
         if (docSnap.exists()) {
             const data = docSnap.data();
-            if (data.lastLogoutAt) {
+            if (data.lastLogoutAt?.toDate) {
                 const lastLogoutTime = data.lastLogoutAt.toDate().getTime();
-                
-                // When did this specific browser session start?
                 const currentSessionTime = new Date(currentUser.metadata.lastSignInTime || 0).getTime();
-
-                // Buffer of 2 seconds to avoid race conditions during the logout process itself
                 if (lastLogoutTime > currentSessionTime + 2000) {
                     console.log("Global logout detected. Signing out local session...");
                     firebaseSignOut(auth).then(() => {
@@ -85,9 +77,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 }
             }
         }
-    });
+    };
 
-    return () => unsubscribeSnapshot();
+    // Primär: logoutSignals/{uid} (neu, PII-frei)
+    const ref = doc(db, 'logoutSignals', currentUser.uid);
+    const unsub = onSnapshot(ref, checkSnap);
+    // Fallback: users/{uid}.lastLogoutAt (Legacy, wird nach Migration entfernt)
+    const legacyRef = doc(db, 'users', currentUser.uid);
+    const unsubLegacy = onSnapshot(legacyRef, checkSnap);
+
+    return () => { unsub(); unsubLegacy(); };
   }, [currentUser]);
 
   const logout = async () => {

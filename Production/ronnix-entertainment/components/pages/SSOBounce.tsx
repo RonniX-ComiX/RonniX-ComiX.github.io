@@ -23,6 +23,19 @@ export const SSOBounce: React.FC = () => {
                 return;
             }
 
+            // Allowlist gegen offenen Redirect (nur eigene 6 Domains)
+            const allowedHosts = ['ronnixentertainment.de', 'ronnixcomix.de', 'ronnixboox.de', 'lamazgamez.de', 'ronnixmoviez.de', 'ronnixseriez.de', 'localhost'];
+            try {
+              const cbHost = new URL(returnCallback).hostname.toLowerCase();
+              if (!allowedHosts.some(h => cbHost === h || cbHost.endsWith('.' + h))) {
+                setStatus('Fehler: Ungültiges Rücksprungziel.');
+                return;
+              }
+            } catch {
+              setStatus('Fehler: Ungültiges Rücksprungziel.');
+              return;
+            }
+
             if (currentUser) {
                 setStatus('Identität bestätigt. Generiere Passierschein...');
                 try {

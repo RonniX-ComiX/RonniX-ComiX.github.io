@@ -1,12 +1,11 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// Custom Plugin: Entfernt Code-Blöcke zwischen <!-- DEV_ONLY_START --> und <!-- DEV_ONLY_END -->
-// Dies passiert NUR beim Befehl 'vite build', nicht bei 'vite dev'.
+// Entfernt Tailwind-CDN DEV_ONLY beim Build (Dev≠Prod vermeiden)
 const removeDevScripts = () => {
   return {
     name: 'remove-dev-scripts',
-    apply: 'build' as const, // FIX: 'as const' zwingt TS dazu, dies als Literal 'build' zu erkennen
+    apply: 'build' as const,
     transformIndexHtml(html: string) {
       return html.replace(
         /<!--\s*DEV_ONLY_START\s*-->[\s\S]*?<!--\s*DEV_ONLY_END\s*-->/g,
@@ -17,24 +16,28 @@ const removeDevScripts = () => {
 };
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({
   plugins: [
-    react(), 
-    removeDevScripts() // Plugin registrieren
+    react(),
+    removeDevScripts()
   ],
   build: {
-    // Erhöht das Limit für die Warnung auf 1000 kB (1 MB)
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
             if (id.includes('firebase')) return 'firebase';
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) return 'react-vendor';
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) return 'react-vendor';
             if (id.includes('lucide-react')) return 'icons';
+            if (id.includes('dompurify')) return 'utils';
           }
         }
       }
     }
-  }
-});
+  },
+  // Prerender: statische Routen für SEO (Hosting bleibt, kein App Hosting nötig)
+  // Build: npm run build:ssg  (vite-ssg build). Fallback: normaler vite build.
+  // Prerender (Phase 2): vite-ssg-react CLI — statische Routen /, /news, /contact, /impressum, /datenschutz, /agb
+  // Hosting bleibt Firebase Hosting (kein App Hosting). Siehe docs/PRERENDER.md.
+} as any));

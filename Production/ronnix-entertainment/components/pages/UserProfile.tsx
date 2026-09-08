@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
-import { updateProfile, updateEmail, updatePassword } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { updateEmail, updatePassword } from 'firebase/auth';
+import { httpsCallable } from 'firebase/functions';
+import { doc, getDoc } from 'firebase/firestore';
 import { User, Save, CheckCircle, PlusCircle, Link as LinkIcon, Lock, Shield, AlertCircle, Clock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { SectionTitle } from '../SectionTitle';
 import { useLanguage } from '../../context/LanguageContext';
-import { auth, db } from '../../firebase';
+import { auth, db, functions } from '../../firebase';
 import { Link } from 'react-router-dom';
 
 export const UserProfile: React.FC = () => {
@@ -90,12 +91,11 @@ export const UserProfile: React.FC = () => {
   const canUpdateAvatar = avatarCooldown === 0;
 
 
-  // Handle General Profile Update (Name & Avatar)
+  // Handle General Profile Update via Function (serverseitiger 24h-Cooldown)
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth.currentUser) return;
 
-    // Client side check
     const nameChanged = displayName !== auth.currentUser.displayName;
     const avatarChanged = photoURL !== auth.currentUser.photoURL;
 
@@ -107,36 +107,19 @@ export const UserProfile: React.FC = () => {
     setSuccessProfile(false);
 
     try {
-      // 1. Update Auth Profile
-      await updateProfile(auth.currentUser, {
-        displayName: displayName,
-        photoURL: photoURL
-      });
-
-      // 2. Prepare Firestore Update
-      const userRef = doc(db, 'users', auth.currentUser.uid);
-      const updateData: any = {
-        displayName: displayName,
-        photoURL: photoURL,
-        uid: auth.currentUser.uid
-      };
-
-      // Set timestamps if changed
-      if (nameChanged) {
-          updateData.lastUsernameUpdate = serverTimestamp();
-          setLastUsernameUpdate(new Date()); // Optimistic update
-      }
-      if (avatarChanged) {
-          updateData.lastAvatarUpdate = serverTimestamp();
-          setLastAvatarUpdate(new Date()); // Optimistic update
-      }
-
-      await setDoc(userRef, updateData, { merge: true });
-
+      const fn = httpsCallable(functions, 'updateProfileWithCooldown');
+      await fn({ displayName, photoURL });
+      if (nameChanged) setLastUsernameUpdate(new Date());
+      if (avatarChanged) setLastAvatarUpdate(new Date());
+      // Auth-State refreshen (displayName/photoURL)
+      await auth.currentUser.reload().catch(() => {});
       setSuccessProfile(true);
       setTimeout(() => setSuccessProfile(false), 3000);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating profile", error);
+      if (error?.code === 'functions/failed-precondition') {
+        alert('Cooldown aktiv (24h) – bitte später erneut versuchen.');
+      }
     }
     setLoadingProfile(false);
   };

@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { setDoc, serverTimestamp, doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
-import { db, auth } from '../../firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, auth, storage } from '../../firebase';
 import { SectionTitle } from '../SectionTitle';
 import { RichTextEditor } from '../RichTextEditor';
 import { useAuth } from '../../context/AuthContext';
@@ -55,6 +56,26 @@ export const CreatePost: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(!!id); // Loading state for fetching edit data
   const [error, setError] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleCoverUpload = async (file: File | undefined) => {
+    if (!file || !currentUser) return;
+    if (!file.type.startsWith('image/')) { setError('Nur Bilddateien (max 5MB).'); return; }
+    if (file.size > 5 * 1024 * 1024) { setError('Cover max 5MB.'); return; }
+    setIsUploading(true);
+    try {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `covers/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const snap = await uploadBytes(ref(storage, path), file, { contentType: file.type });
+      const url = await getDownloadURL(snap.ref);
+      setCoverUrl(url);
+    } catch (e) {
+      console.error('Cover upload failed', e);
+      setError('Cover-Upload fehlgeschlagen (Storage-Regeln/Admin prüfen).');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   // Strict Access Control
   if (!currentUser || !isAdmin) {
@@ -347,14 +368,22 @@ export const CreatePost: React.FC = () => {
                     </label>
                     <div className="relative">
                         <ImageIcon className="absolute left-3 top-3 text-gray-500" size={18} />
-                        <input 
-                            type="text" 
+                        <input
+                            type="text"
                             value={coverUrl}
                             onChange={(e) => setCoverUrl(e.target.value)}
                             className="w-full bg-black border border-neutral-700 text-white pl-10 pr-4 py-3 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-colors placeholder-gray-700"
                             placeholder="https://..."
                         />
                     </div>
+                    <div className="mt-2 flex items-center gap-3">
+                        <label className="text-sm text-gray-400 cursor-pointer hover:text-white">
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleCoverUpload(e.target.files?.[0])} />
+                            <span className="underline">{isUploading ? 'Lade hoch…' : 'Oder Bild hochladen (Storage, max 5MB)'}</span>
+                        </label>
+                        {coverUrl?.startsWith('http') && <img src={coverUrl} alt="Cover Vorschau" className="h-10 w-auto rounded border border-neutral-700" loading="lazy" />}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Tipp: Resize-Extension (Storage Resize Images) für AVIF/WebP-Thumbs aktivieren.</p>
                 </div>
 
                 <div>

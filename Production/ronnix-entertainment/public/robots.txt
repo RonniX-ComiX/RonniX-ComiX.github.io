@@ -1,5 +1,12 @@
 User-agent: *
 Allow: /
+Disallow: /profile
+Disallow: /create
+Disallow: /edit/
+Disallow: /sso
+Disallow: /sso-bounce
+Disallow: /sso-seed
+Disallow: /global-logout
 
-# Sitemap Index
+# Host-aware Sitemap (Function liefert je Domain gefiltert)
 Sitemap: https://ronnixentertainment.de/sitemap.xml

@@ -32,6 +32,8 @@ export const SSOCallback: React.FC = () => {
             try {
                 await signInWithCustomToken(auth, token);
                 setStatus('Docking Completed!');
+                // Token sofort aus URL/History entfernen (kein Leak via Referrer/Logs)
+                window.history.replaceState(null, '', window.location.pathname);
                 // Instant redirect after success to minimize waiting time
                 navigate(returnUrl, { replace: true });
             } catch (err: any) {

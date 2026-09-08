@@ -1,0 +1,25 @@
+{
+  "parameters": {
+    "cooldown_hours": {
+      "defaultValue": { "value": "24" },
+      "description": "Profil-Cooldown für Name/Avatar (Stunden)"
+    },
+    "comments_page_size": {
+      "defaultValue": { "value": "20" },
+      "description": "Kommentare pro Seite (PostDetail Paging)"
+    },
+    "posts_page_size": {
+      "defaultValue": { "value": "12" },
+      "description": "Posts pro Grid-Seite"
+    },
+    "maintenance_mode": {
+      "defaultValue": { "value": "false" },
+      "description": "Wartungsmodus-Banner"
+    },
+    "sitemap_cache_seconds": {
+      "defaultValue": { "value": "3600" },
+      "description": "Sitemap CDN Cache TTL"
+    }
+  },
+  "version": { "description": "Initial: Cooldown/PageSize/Maintenance ohne Redeploy" }
+}

@@ -3,72 +3,106 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- HELPER FUNCTIONS ---
-    
+    // --- HELPERS ---
     function isAdmin() {
       return request.auth != null && request.auth.uid == 'nRMiuZsj4GZQ0siYXFOqXVCc7mB2';
     }
-
     function isOwner(userId) {
       return request.auth != null && request.auth.uid == userId;
     }
-    
     function isAuth() {
       return request.auth != null;
     }
+    function isValidPost() {
+      return request.resource.data.title is string
+        && request.resource.data.title.size() >= 3
+        && request.resource.data.title.size() <= 160
+        && request.resource.data.content is string
+        && request.resource.data.content.size() >= 1
+        && request.resource.data.content.size() <= 50000
+        && request.resource.data.category in ['news', 'comics', 'books', 'games', 'movies', 'series']
+        && (!('coverUrl' in request.resource.data) || request.resource.data.coverUrl is string);
+    }
+    function isValidComment() {
+      return request.resource.data.text is string
+        && request.resource.data.text.size() >= 1
+        && request.resource.data.text.size() <= 5000
+        && request.resource.data.userId == request.auth.uid
+        && (!('parentId' in request.resource.data) || request.resource.data.parentId is string || request.resource.data.parentId == null);
+    }
 
-    // --- MATCH RULES ---
-
-    // Regeln für Blog-Posts
+    // --- POSTS ---
     match /posts/{postId} {
       allow read: if true;
-      // Admins darf alles
-      allow write: if isAdmin();
-      
-      // Authentifizierte User dürfen Transaction-Updates für Votes machen (Counters)
-      allow update: if isAuth() 
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'dislikesCount']);
+      // Nur Admin schreibt Posts (inkl. Counter — Counter laufen über Functions/Admin-SDK)
+      allow create: if isAdmin() && isValidPost();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
 
-      // SUB-COLLECTION: Votes (Post Votes)
+      // Votes: Owner schreibt nur eigenes Vote-Doc mit validem value, Counter NICHT clientseitig
       match /votes/{userId} {
         allow read: if true;
-        allow write: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && request.resource.data.value in [1, -1]
+          && request.resource.data.keys().hasOnly(['value', 'updatedAt']);
+        allow delete: if isOwner(userId);
       }
 
-      // SUB-COLLECTION: Comments
+      // Comments
       match /comments/{commentId} {
         allow read: if true;
-        // Authentifizierte User dürfen erstellen
-        allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
-        
-        // Update Regeln:
-        // 1. Owner darf Text ändern
-        // 2. Jeder Auth-User darf Counters (Likes) ändern
-        allow update: if isAuth() && (
-          (resource.data.userId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'updatedAt'])) ||
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'dislikesCount'])
-        );
-
-        // Löschen: Owner oder Admin
+        allow create: if isAuth() && isValidComment();
+        // Owner darf nur Text ändern, Counter nur via Functions
+        allow update: if isAuth()
+          && resource.data.userId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'updatedAt'])
+          && request.resource.data.text is string
+          && request.resource.data.text.size() >= 1
+          && request.resource.data.text.size() <= 5000;
         allow delete: if isAuth() && (resource.data.userId == request.auth.uid || isAdmin());
 
-        // SUB-SUB-COLLECTION: Comment Votes
         match /votes/{userId} {
           allow read: if true;
-          allow write: if isOwner(userId);
+          allow create, update: if isOwner(userId)
+            && request.resource.data.value in [1, -1]
+            && request.resource.data.keys().hasOnly(['value', 'updatedAt']);
+          allow delete: if isOwner(userId);
         }
       }
     }
 
-    // Regeln für öffentliche User-Profile
+    // --- USERS (public, ohne PII) ---
+    // email gehört NICHT hierher -> usersPrivate/{uid}. Bestehende email-Felder migrieren/löschen.
     match /users/{userId} {
       allow read: if true;
-      allow write: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId)
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() >= 1
+        && request.resource.data.displayName.size() <= 40
+        && (!('photoURL' in request.resource.data) || request.resource.data.photoURL is string)
+        && !('email' in request.resource.data)
+        && !('lastLogoutAt' in request.resource.data);
+      allow update: if (isOwner(userId) || isAdmin())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['displayName', 'photoURL', 'uid', 'lastUsernameUpdate', 'lastAvatarUpdate'])
+        && (!('displayName' in request.resource.data) || (request.resource.data.displayName is string && request.resource.data.displayName.size() >= 1 && request.resource.data.displayName.size() <= 40));
+      allow delete: if false;
     }
 
-    // SPEZIAL-REGEL FÜR ADMIN CHECK
+    // --- USERS PRIVATE (PII: email, nur Owner/Admin) ---
+    match /usersPrivate/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+
+    // --- GLOBAL LOGOUT SIGNAL (nur Functions schreiben, Clients lesen eigenes Doc) ---
+    match /logoutSignals/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if false;
+    }
+
     match /admin_utils/{document=**} {
       allow read: if isAdmin();
+      allow write: if false;
     }
 
     match /{document=**} {

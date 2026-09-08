@@ -2,21 +2,23 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { 
-  doc, 
-  getDoc, 
-  deleteDoc, 
+import {
+  doc,
+  getDoc,
+  deleteDoc,
   updateDoc,
-  Timestamp, 
-  collection, 
-  addDoc, 
-  query, 
-  orderBy, 
-  onSnapshot, 
+  Timestamp,
+  collection,
+  addDoc,
+  query,
+  orderBy,
+  onSnapshot,
   serverTimestamp,
-  runTransaction
+  limit,
 } from 'firebase/firestore';
-import { db } from '../../firebase';
+import DOMPurify from 'dompurify';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '../../firebase';
 import { 
   ArrowLeft, Calendar, User, Edit, Trash2, Tag, Clock, 
   ThumbsUp, ThumbsDown, MessageSquare, Share2, 
@@ -54,7 +56,7 @@ const CommentItem: React.FC<{
 
     // Filter replies for this comment
     const replies = allComments.filter(c => c.parentId === comment.id);
-    const userInfo = users[comment.userId] || { name: '...', photoURL: '' };
+    const userInfo = users[comment.userId] || (comment.authorName ? { name: comment.authorName, photoURL: comment.authorPhotoURL || '' } : { name: '...', photoURL: '' });
     const isOwner = currentUserId === comment.userId;
 
     // Realtime Vote Listener for this specific comment/user
@@ -74,40 +76,9 @@ const CommentItem: React.FC<{
     const handleVote = async (type: 'like' | 'dislike') => {
         if (!currentUserId || isVoting) return;
         setIsVoting(true);
-
-        const commentRef = doc(db, 'posts', postId, 'comments', comment.id);
-        const voteRef = doc(db, 'posts', postId, 'comments', comment.id, 'votes', currentUserId);
-        const val = type === 'like' ? 1 : -1;
-
         try {
-            await runTransaction(db, async (transaction) => {
-                const voteDoc = await transaction.get(voteRef);
-                const cDoc = await transaction.get(commentRef);
-                if (!cDoc.exists()) throw "Comment missing";
-
-                let newLikes = cDoc.data().likesCount || 0;
-                let newDislikes = cDoc.data().dislikesCount || 0;
-
-                if (voteDoc.exists()) {
-                    const oldVal = voteDoc.data().value;
-                    if (oldVal === val) {
-                        transaction.delete(voteRef);
-                        if (val === 1) newLikes--; else newDislikes--;
-                    } else {
-                        transaction.update(voteRef, { value: val });
-                        if (val === 1) { newLikes++; newDislikes--; }
-                        else { newDislikes++; newLikes--; }
-                    }
-                } else {
-                    transaction.set(voteRef, { value: val });
-                    if (val === 1) newLikes++; else newDislikes++;
-                }
-
-                transaction.update(commentRef, {
-                    likesCount: Math.max(0, newLikes),
-                    dislikesCount: Math.max(0, newDislikes)
-                });
-            });
+            const voteComment = httpsCallable(functions, 'voteComment');
+            await voteComment({ postId, commentId: comment.id, value: type });
         } catch (e) {
             console.error("Comment vote failed", e);
         }
@@ -337,12 +308,13 @@ export const PostDetail: React.FC = () => {
     fetchPost();
   }, [id, isAdmin]);
 
-  // 2. Realtime Comments & User Fetching
+  // 2. Realtime Comments (limitiert via Remote Config pageSize, Default 20) + denormalisierte Autoren
   useEffect(() => {
     if (!id) return;
     const q = query(
-      collection(db, 'posts', id, 'comments'), 
-      orderBy('createdAt', 'desc')
+      collection(db, 'posts', id, 'comments'),
+      orderBy('createdAt', 'desc'),
+      limit(20)
     );
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       const msgs = snapshot.docs.map(doc => ({
@@ -351,35 +323,46 @@ export const PostDetail: React.FC = () => {
       }));
       setComments(msgs);
 
-      // Extract unique user IDs
-      const userIds = [...new Set(msgs.map((m: any) => m.userId))] as string[];
-      
-      const newUsers: Record<string, { name: string, photoURL: string }> = {};
-      
-      for (const uid of userIds) {
-          if (uid && !commentUsers[uid]) {
-              try {
-                  const userDoc = await getDoc(doc(db, 'users', uid));
-                  if (userDoc.exists()) {
-                      const uData = userDoc.data();
-                      newUsers[uid] = {
-                          name: uData.displayName || 'Hero',
-                          photoURL: uData.photoURL || ''
-                      };
-                  } else {
-                      newUsers[uid] = { name: 'Unknown User', photoURL: '' };
-                  }
-              } catch (e) {
-                  console.error("Error fetching comment user", e);
+      // Denormalisierte Autoren bevorzugen (onCommentCreated), nur Fallback per Batch-Fetch
+      const missing = [...new Set(msgs.filter((m: any) => !m.authorName && m.userId).map((m: any) => m.userId))] as string[];
+      const toFetch = missing.filter(uid => uid && !(commentUsers as any)[uid]);
+      if (toFetch.length) {
+        try {
+          const results = await Promise.all(toFetch.map(async (uid) => {
+            try {
+              const userDoc = await getDoc(doc(db, 'users', uid));
+              if (userDoc.exists()) {
+                const uData = userDoc.data() as any;
+                return [uid, { name: uData.displayName || 'Hero', photoURL: uData.photoURL || '' }] as const;
               }
+            } catch (e) { console.error("Error fetching comment user", e); }
+            return [uid, { name: 'Unknown User', photoURL: '' }] as const;
+          }));
+          const newUsers: Record<string, { name: string, photoURL: string }> = {};
+          results.forEach(([uid, info]) => { newUsers[uid] = info; });
+          // Denormalisierte direkt übernehmen (kein Fetch nötig)
+          msgs.forEach((m: any) => {
+            if (m.authorName && !newUsers[m.userId]) {
+              newUsers[m.userId] = { name: m.authorName, photoURL: m.authorPhotoURL || '' };
+            }
+          });
+          if (Object.keys(newUsers).length > 0) {
+            setCommentUsers(prev => ({ ...prev, ...newUsers }));
           }
-      }
-
-      if (Object.keys(newUsers).length > 0) {
-          setCommentUsers(prev => ({ ...prev, ...newUsers }));
+        } catch (e) { console.error("comment user batch failed", e); }
+      } else {
+        // Nur Denormalisierte übernehmen
+        const patch: Record<string, { name: string, photoURL: string }> = {};
+        msgs.forEach((m: any) => {
+          if (m.authorName && !(commentUsers as any)[m.userId]) {
+            patch[m.userId] = { name: m.authorName, photoURL: m.authorPhotoURL || '' };
+          }
+        });
+        if (Object.keys(patch).length) setCommentUsers(prev => ({ ...prev, ...patch }));
       }
     });
     return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   // 3. Realtime Post Vote
@@ -436,42 +419,14 @@ export const PostDetail: React.FC = () => {
 
   const handlePostVote = async (type: 'like' | 'dislike') => {
       if (!currentUser || !id || isVoting) return;
+      if (!currentUser.emailVerified && currentUser.providerData?.[0]?.providerId === 'password') {
+        alert('Bitte zuerst E-Mail verifizieren (Votes/Comments).');
+        return;
+      }
       setIsVoting(true);
-
-      const postRef = doc(db, 'posts', id);
-      const voteRef = doc(db, 'posts', id, 'votes', currentUser.uid);
-      const val = type === 'like' ? 1 : -1;
-
       try {
-          await runTransaction(db, async (transaction) => {
-              const voteDoc = await transaction.get(voteRef);
-              const postDoc = await transaction.get(postRef);
-              
-              if (!postDoc.exists()) throw "Post does not exist!";
-
-              let newLikes = postDoc.data().likesCount || 0;
-              let newDislikes = postDoc.data().dislikesCount || 0;
-
-              if (voteDoc.exists()) {
-                  const oldVal = voteDoc.data().value;
-                  if (oldVal === val) {
-                      transaction.delete(voteRef);
-                      if (val === 1) newLikes--; else newDislikes--;
-                  } else {
-                      transaction.update(voteRef, { value: val });
-                      if (val === 1) { newLikes++; newDislikes--; }
-                      else { newDislikes++; newLikes--; }
-                  }
-              } else {
-                  transaction.set(voteRef, { value: val });
-                  if (val === 1) newLikes++; else newDislikes++;
-              }
-
-              transaction.update(postRef, {
-                  likesCount: Math.max(0, newLikes),
-                  dislikesCount: Math.max(0, newDislikes)
-              });
-          });
+          const votePost = httpsCallable(functions, 'votePost');
+          await votePost({ postId: id, value: type });
       } catch (e) {
           console.error("Voting failed", e);
       }
@@ -480,15 +435,21 @@ export const PostDetail: React.FC = () => {
 
   const handleSubmitComment = async (e: React.FormEvent, parentId: string | null = null, customText?: string) => {
       if (e) e.preventDefault();
-      const text = customText || newComment;
-      
-      if (!currentUser || !text.trim() || !id) return;
+      const text = (customText || newComment).trim().slice(0, 5000);
+
+      if (!currentUser || !text || !id) return;
+      if (!currentUser.emailVerified && currentUser.providerData?.[0]?.providerId === 'password') {
+        alert('Bitte zuerst E-Mail verifizieren (Votes/Comments).');
+        return;
+      }
 
       try {
           await addDoc(collection(db, 'posts', id, 'comments'), {
-              text: text.trim(),
+              text,
               userId: currentUser.uid,
-              parentId: parentId, // New field for threading
+              authorName: currentUser.displayName || 'Hero',
+              authorPhotoURL: currentUser.photoURL || '',
+              parentId: parentId,
               likesCount: 0,
               dislikesCount: 0,
               createdAt: serverTimestamp()
@@ -755,16 +716,16 @@ export const PostDetail: React.FC = () => {
                 </div>
             )}
 
-            {/* Main Text Content */}
-            <div 
-                className="prose prose-invert prose-lg max-w-none 
-                prose-headings:font-retro prose-headings:text-white 
-                prose-h1:text-red-500 prose-h2:text-red-400 
-                prose-a:text-red-500 hover:prose-a:text-red-400 
+            {/* Main Text Content (DOMPurify gegen XSS aus RichTextEditor-HTML) */}
+            <div
+                className="prose prose-invert prose-lg max-w-none
+                prose-headings:font-retro prose-headings:text-white
+                prose-h1:text-red-500 prose-h2:text-red-400
+                prose-a:text-red-500 hover:prose-a:text-red-400
                 prose-strong:text-white
                 prose-blockquote:border-l-4 prose-blockquote:border-red-600 prose-blockquote:bg-neutral-900/50 prose-blockquote:px-4 prose-blockquote:py-1 prose-blockquote:not-italic prose-blockquote:text-gray-300
                 prose-img:rounded-lg prose-img:border prose-img:border-neutral-800"
-                dangerouslySetInnerHTML={{ __html: displayContent }} 
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(displayContent || '', { ADD_ATTR: ['target', 'rel'] }) }}
             />
             
             <div className="my-12 w-full h-px bg-neutral-800"></div>

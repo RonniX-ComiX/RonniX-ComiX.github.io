@@ -1,8 +1,8 @@
 
 
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, useSearchParams } from 'react-router-dom';
-import { HelmetProvider } from 'react-helmet-async'; // Import HelmetProvider
+import React, { Suspense, lazy } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation, useSearchParams, Link } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { Navbar } from './components/Navbar';
@@ -16,22 +16,51 @@ import { SeriesSection } from './components/sections/SeriesSection';
 import { NewsSection } from './components/sections/NewsSection';
 import { ContactSection } from './components/sections/ContactSection';
 import { Footer } from './components/Footer';
-import { SEO } from './components/SEO'; // Import SEO Component
-import { StructuredData } from './components/StructuredData'; // Import StructuredData
+import { SEO } from './components/SEO';
+import { StructuredData } from './components/StructuredData';
+import { useRemoteConfigFlags } from './hooks/useRemoteConfigFlags';
 
-// Legal Pages
-import { Impressum } from './components/pages/Impressum';
-import { Datenschutz } from './components/pages/Datenschutz';
-import { AGB } from './components/pages/AGB';
-import { UserProfile } from './components/pages/UserProfile';
-import { CreatePost } from './components/pages/CreatePost';
-import { PostDetail } from './components/pages/PostDetail';
-import { SSOCallback } from './components/pages/SSOCallback'; 
-import { SSOBounce } from './components/pages/SSOBounce'; 
-import { SSOSeed } from './components/pages/SSOSeed'; 
-import { GlobalLogout } from './components/pages/GlobalLogout';
-import { SSOAutoLogin } from './components/SSOAutoLogin'; 
+// Code-Splitting: schwere/Admin/SSO-Routen lazy (kleineres Initial-Bundle, bessere LCP)
+const Impressum = lazy(() => import('./components/pages/Impressum').then(m => ({ default: m.Impressum })));
+const Datenschutz = lazy(() => import('./components/pages/Datenschutz').then(m => ({ default: m.Datenschutz })));
+const AGB = lazy(() => import('./components/pages/AGB').then(m => ({ default: m.AGB })));
+const UserProfile = lazy(() => import('./components/pages/UserProfile').then(m => ({ default: m.UserProfile })));
+const CreatePost = lazy(() => import('./components/pages/CreatePost').then(m => ({ default: m.CreatePost })));
+const PostDetail = lazy(() => import('./components/pages/PostDetail').then(m => ({ default: m.PostDetail })));
+const SSOCallback = lazy(() => import('./components/pages/SSOCallback').then(m => ({ default: m.SSOCallback })));
+const SSOBounce = lazy(() => import('./components/pages/SSOBounce').then(m => ({ default: m.SSOBounce })));
+const SSOSeed = lazy(() => import('./components/pages/SSOSeed').then(m => ({ default: m.SSOSeed })));
+const GlobalLogout = lazy(() => import('./components/pages/GlobalLogout').then(m => ({ default: m.GlobalLogout })));
+import { SSOAutoLogin } from './components/SSOAutoLogin';
 import { getCurrentCategory } from './utils/domainConfig';
+
+const RouteFallback = () => (
+  <div className="flex justify-center items-center min-h-[50vh]">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
+  </div>
+);
+
+const NotFound = () => (
+  <div className="container mx-auto px-6 py-24 text-center min-h-[50vh]">
+    <SEO title="404" noIndex />
+    <h1 className="text-5xl font-retro text-white mb-4">404</h1>
+    <p className="text-gray-400 mb-6">Diese Seite existiert nicht.</p>
+    <Link to="/" className="text-red-500 hover:underline">Zur Startseite</Link>
+  </div>
+);
+
+const MaintenanceBanner = () => {
+  let maintenance = false;
+  try {
+    maintenance = useRemoteConfigFlags().maintenanceMode;
+  } catch {}
+  if (!maintenance) return null;
+  return (
+    <div className="bg-yellow-600 text-black text-center text-sm font-bold py-2 px-4">
+      Wartungsmodus – einige Funktionen sind temporär eingeschränkt.
+    </div>
+  );
+};
 
 // Wrapper component to handle page specific layout or effects (like scroll to top)
 const ScrollToTop = () => {
@@ -219,94 +248,74 @@ const App: React.FC = () => {
         <LanguageProvider>
           <Router>
             <ScrollToTop />
-            <LanguageParamSynchronizer /> {/* Ensures language sticks when arriving from other domains */}
-            <SSOAutoLogin /> {/* Automatically checks auth status across domains */}
-            
+            <LanguageParamSynchronizer />
+            <SSOAutoLogin />
+            <MaintenanceBanner />
+
             <div className="flex flex-col min-h-screen bg-neutral-950 font-sans text-white overflow-x-hidden w-full relative">
               <Navbar />
-              
+
               <main className="flex-grow">
+                <Suspense fallback={<RouteFallback />}>
                 <Routes>
-                  {/* Dynamic Home Route based on Domain */}
                   <Route path="/" element={renderHomeRoute()} />
-                  
-                  {/* SSO Handlers */}
-                  <Route path="/sso" element={<SSOCallback />} />
-                  <Route path="/sso-bounce" element={<SSOBounce />} />
-                  <Route path="/sso-seed" element={<SSOSeed />} /> {/* New Route */}
-                  <Route path="/global-logout" element={<GlobalLogout />} />
+
+                  {/* SSO Handlers (noIndex, kein Duplicate) */}
+                  <Route path="/sso" element={<><SEO title="SSO" noIndex /><SSOCallback /></>} />
+                  <Route path="/sso-bounce" element={<><SEO title="SSO" noIndex /><SSOBounce /></>} />
+                  <Route path="/sso-seed" element={<><SEO title="SSO" noIndex /><SSOSeed /></>} />
+                  <Route path="/global-logout" element={<><SEO title="Logout" noIndex /><GlobalLogout /></>} />
 
                   <Route path="/news" element={
                     <div className="container mx-auto px-6 py-12 animate-fade-in">
-                      <SEO title="News & Updates" />
+                      <SEO title="News & Updates" description="Neuigkeiten aus dem RonniX-Universum: Comics, Bücher, Games, Filme & Serien." canonicalPath="/news" />
                       <NewsSection />
                     </div>
                   } />
 
-                  {/* Redirects for main domain navigation to external sub-domains */}
                   <Route path="/comix" element={<ExternalRedirect to="https://ronnixcomix.de" />} />
-                  
                   <Route path="/boox" element={<ExternalRedirect to="https://ronnixboox.de" />} />
-                  
                   <Route path="/gamez" element={<ExternalRedirect to="https://lamazgamez.de" />} />
-
                   <Route path="/moviez" element={<ExternalRedirect to="https://ronnixmoviez.de" />} />
-
                   <Route path="/seriez" element={<ExternalRedirect to="https://ronnixseriez.de" />} />
-                  
+
                   <Route path="/contact" element={
                     <div className="container mx-auto px-6 py-12 animate-fade-in">
-                      <SEO title="Kontakt" />
+                      <SEO title="Kontakt" description="Kontakt zum RonniX-Team." canonicalPath="/contact" />
                       <ContactSection />
                     </div>
                   } />
-                  
+
                   <Route path="/profile" element={
                     <div className="animate-fade-in">
-                      <SEO title="Dein Profil" />
+                      <SEO title="Dein Profil" noIndex />
                       <UserProfile />
                     </div>
                   } />
 
-                  {/* Content Routes */}
                   <Route path="/create" element={
                     <div className="animate-fade-in">
-                      <SEO title="Erstellen" />
+                      <SEO title="Erstellen" noIndex />
                       <CreatePost />
                     </div>
                   } />
-                  
-                  {/* Route for Editing - reuses CreatePost component */}
+
                   <Route path="/edit/:id" element={
                     <div className="animate-fade-in">
-                      <SEO title="Bearbeiten" />
+                      <SEO title="Bearbeiten" noIndex />
                       <CreatePost />
                     </div>
                   } />
-                  
+
                   <Route path="/post/:id" element={<PostDetail />} />
 
-                  {/* Legal Routes */}
-                  <Route path="/impressum" element={
-                    <>
-                        <SEO title="Impressum" />
-                        <Impressum />
-                    </>
-                  } />
-                  <Route path="/datenschutz" element={
-                    <>
-                        <SEO title="Datenschutz" />
-                        <Datenschutz />
-                    </>
-                  } />
-                  <Route path="/agb" element={
-                    <>
-                        <SEO title="AGB" />
-                        <AGB />
-                    </>
-                  } />
+                  <Route path="/impressum" element={<><SEO title="Impressum" canonicalPath="/impressum" /><Impressum /></>} />
+                  <Route path="/datenschutz" element={<><SEO title="Datenschutz" canonicalPath="/datenschutz" /><Datenschutz /></>} />
+                  <Route path="/agb" element={<><SEO title="AGB" canonicalPath="/agb" /><AGB /></>} />
 
+                  <Route path="*" element={<NotFound />} />
                 </Routes>
+                </Suspense>
               </main>
 
               <Footer />

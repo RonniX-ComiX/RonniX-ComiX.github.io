@@ -30,7 +30,7 @@ export const SSOSeed: React.FC = () => {
                 // Sign in on the Main Domain
                 await signInWithCustomToken(auth, token);
                 setStatus('Synchronisation erfolgreich!');
-                
+                window.history.replaceState(null, '', window.location.pathname);
                 // Immediately return
                 window.location.href = returnUrl;
             } catch (err) {

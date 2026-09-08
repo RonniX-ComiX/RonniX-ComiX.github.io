@@ -1,63 +1,74 @@
-
 import { useState, useEffect } from 'react';
 import { collection, query, where, orderBy, getDocs, Timestamp, limit, QueryConstraint } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 
-// Simple in-memory cache outside the hook (global to the app session)
-const cache: Record<string, { data: any[], timestamp: number }> = {};
-const CACHE_DURATION = 5 * 60 * 1000; // 5 Minutes
+// In-Memory + localStorage Persist (SWR: sofort Cache, dann Revalidate)
+const memCache: Record<string, { data: any[], timestamp: number }> = {};
+const CACHE_DURATION = 5 * 60 * 1000; // 5 Minuten
+
+const readPersisted = (key: string) => {
+  try {
+    const raw = localStorage.getItem(`ronnix_cache_${key}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Date.now() - parsed.timestamp < CACHE_DURATION) return parsed.data;
+  } catch {}
+  return null;
+};
+const writePersisted = (key: string, data: any[]) => {
+  try {
+    localStorage.setItem(`ronnix_cache_${key}`, JSON.stringify({ data, timestamp: Date.now() }));
+  } catch {}
+};
 
 export const useCachedPosts = (category: string | 'latest', limitCount?: number) => {
   const { isAdmin } = useAuth();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     const fetchPosts = async () => {
       setLoading(true);
-      
-      // Create a unique cache key based on params
+      setError(null);
       const cacheKey = `${category}_${isAdmin ? 'admin' : 'public'}_${limitCount || 'all'}`;
       const now = Date.now();
 
-      // Check Cache
-      if (cache[cacheKey] && (now - cache[cacheKey].timestamp < CACHE_DURATION)) {
-        // console.log(`Serving ${category} from cache`);
-        setPosts(cache[cacheKey].data);
+      if (memCache[cacheKey] && (now - memCache[cacheKey].timestamp < CACHE_DURATION)) {
+        setPosts(memCache[cacheKey].data);
         setLoading(false);
         return;
       }
+      const persisted = readPersisted(cacheKey);
+      if (persisted) {
+        setPosts(persisted);
+        setLoading(false);
+        // SWR: im Hintergrund revalidieren
+      } else {
+        setLoading(true);
+      }
 
-      // Build Query
       try {
         const constraints: QueryConstraint[] = [orderBy('publishedAt', 'desc')];
-
-        if (category !== 'latest') {
-             constraints.push(where('category', '==', category));
-        }
-
-        if (!isAdmin) {
-             constraints.push(where('publishedAt', '<=', Timestamp.now()));
-        }
-        
-        if (limitCount) {
-            constraints.push(limit(limitCount));
-        }
+        if (category !== 'latest') constraints.push(where('category', '==', category));
+        if (!isAdmin) constraints.push(where('publishedAt', '<=', Timestamp.now()));
+        // Default-Limit gegen Full-Scans (Remote Config posts_page_size, Default 12; latest 5)
+        const effLimit = limitCount ?? (category === 'latest' ? 5 : 12);
+        constraints.push(limit(effLimit));
 
         const q = query(collection(db, 'posts'), ...constraints);
         const snapshot = await getDocs(q);
 
         const postsData = snapshot.docs.map(doc => {
             const data = doc.data();
-            
-            // Sanitize
             const sanitize = (val: any): any => {
                 if (!val) return val;
                 if (typeof val.toMillis === 'function' && typeof val.seconds === 'number') {
                     return { seconds: val.seconds, nanoseconds: val.nanoseconds };
                 }
-                if (val.firestore && val.path) return val.path; 
+                if (val.firestore && val.path) return val.path;
                 if (Array.isArray(val)) return val.map(sanitize);
                 if (typeof val === 'object') {
                     const res: any = {};
@@ -66,7 +77,6 @@ export const useCachedPosts = (category: string | 'latest', limitCount?: number)
                 }
                 return val;
             };
-
             const sanitizedData = sanitize(data);
             return {
                 id: doc.id,
@@ -77,22 +87,20 @@ export const useCachedPosts = (category: string | 'latest', limitCount?: number)
             };
         });
 
-        // Save to Cache
-        cache[cacheKey] = {
-            data: postsData,
-            timestamp: now
-        };
-
-        setPosts(postsData);
-      } catch (error) {
-          console.error(`Error fetching ${category}:`, error);
+        memCache[cacheKey] = { data: postsData, timestamp: now };
+        writePersisted(cacheKey, postsData);
+        if (!cancelled) setPosts(postsData);
+      } catch (err: any) {
+          console.error(`Error fetching ${category}:`, err);
+          if (!cancelled) setError(err?.code || 'fetch-failed');
       } finally {
-          setLoading(false);
+          if (!cancelled) setLoading(false);
       }
     };
 
     fetchPosts();
+    return () => { cancelled = true; };
   }, [category, isAdmin, limitCount]);
 
-  return { posts, loading };
+  return { posts, loading, error };
 };

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Mail, Lock, User as UserIcon, AlertCircle, Loader2 } from 'lucide-react';
 import { auth, googleProvider, db } from '../firebase';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, getRedirectResult, updateProfile, sendEmailVerification } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
@@ -25,15 +25,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-  // Helper to sync user to Firestore
+  // Helper to sync user to Firestore (PII-frei: email -> usersPrivate)
   const syncUserToFirestore = async (user: any, name?: string) => {
     const userRef = doc(db, 'users', user.uid);
     await setDoc(userRef, {
         uid: user.uid,
         displayName: name || user.displayName || 'Anonymous Hero',
         photoURL: user.photoURL || '',
-        email: user.email 
     }, { merge: true });
+    // PII separat, nur Owner/Admin lesbar (siehe firestore.rules usersPrivate)
+    if (user.email) {
+      await setDoc(doc(db, 'usersPrivate', user.uid), {
+        email: user.email,
+        updatedAt: new Date().toISOString(),
+      }, { merge: true }).catch(() => {});
+    }
   };
 
   // NEW: Helper to sync session to Main Domain (The "Seed")
@@ -76,6 +82,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 displayName: username
             });
             await syncUserToFirestore(auth.currentUser, username);
+            // E-Mail-Verifizierung (Pflicht für Votes/Comments/Profile-Functions)
+            await sendEmailVerification(auth.currentUser).catch(() => {});
         }
       }
       
@@ -97,8 +105,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       setError('');
       setLoading(true);
       try {
-          const result = await signInWithPopup(auth, googleProvider);
-          await syncUserToFirestore(result.user);
+          // Popup primär, Redirect-Fallback für Mobile/3rd-Party-Cookie-Block
+          let user = null;
+          try {
+            const result = await signInWithPopup(auth, googleProvider);
+            user = result.user;
+          } catch (popupErr: any) {
+            if (popupErr?.code === 'auth/popup-blocked' || popupErr?.code === 'auth/popup-closed-by-user' || popupErr?.code === 'auth/unauthorized-domain') {
+              await signInWithRedirect(auth, googleProvider);
+              return;
+            }
+            throw popupErr;
+          }
+          // Redirect-Rückkehr (falls vorher Redirect genutzt)
+          const redirectRes = await getRedirectResult(auth).catch(() => null);
+          user = user || redirectRes?.user || auth.currentUser;
+          if (user) await syncUserToFirestore(user);
           
           // Attempt Upstream Sync
           const isRedirecting = await syncSessionToMain();

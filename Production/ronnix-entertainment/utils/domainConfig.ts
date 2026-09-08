@@ -26,8 +26,9 @@ export const getTargetCategory = (path: string): SiteCategory => {
   return 'main';
 };
 
-// Erkennt anhand des Hostnames, auf welcher "Seite" wir uns befinden
+// Erkennt anhand des Hostnames, auf welcher "Seite" wir uns befinden (SSG-safe)
 export const getCurrentCategory = (): SiteCategory => {
+  if (typeof window === 'undefined') return 'main';
   const hostname = window.location.hostname.toLowerCase();
 
   // ComiX
@@ -47,10 +48,10 @@ export const getCurrentCategory = (): SiteCategory => {
 export const getLinkUrl = (path: string, currentLang?: string): { url: string; isExternal: boolean } => {
   const currentCategory = getCurrentCategory();
   const targetCategory = getTargetCategory(path);
-  const isLocalhost = window.location.hostname.includes('localhost');
-  
+  const isLocalhost = typeof window !== 'undefined' && window.location.hostname.includes('localhost');
+
   // Für Production nutzen wir immer https, für Localhost dynamisch
-  const protocol = isLocalhost ? window.location.protocol + '//' : 'https://';
+  const protocol = isLocalhost && typeof window !== 'undefined' ? window.location.protocol + '//' : 'https://';
 
   let resultUrl = '';
   let isExternal = false;
