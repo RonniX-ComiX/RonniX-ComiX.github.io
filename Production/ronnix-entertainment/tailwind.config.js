@@ -19,9 +19,11 @@ export default {
         }
       },
       fontFamily: {
-        'retro': ['Bangers', 'cursive'],
-        'gaming': ['"Press Start 2P"', 'cursive'],
-        'sans': ['Roboto', 'sans-serif'],
+        // *-fb = metrisch angepasste local()-Fallbacks (siehe @font-face in index.css):
+        // Swap ohne Layout-Shift, danach Systemschrift ohne Webfont-Download.
+        'retro': ['Bangers', "'Bangers-fb'", '"Arial Black"', 'Impact', 'sans-serif'],
+        'gaming': ['"Press Start 2P"', "'PS2P-fb'", '"Courier New"', 'monospace'],
+        'sans': ['Roboto', "'Roboto-fb'", 'Arial', '"Helvetica Neue"', 'sans-serif'],
         'serif': ['Georgia', 'serif'],
       },
       animation: {

@@ -10,6 +10,60 @@ html, body {
   padding: 0;
 }
 
+/* Selbst gehostete Fonts (public/fonts/, kein Google-CDN zur Laufzeit).
+   Vermessen per scripts-Auszug aus den Binär-Metriken (upm/hhea/avg-Advance):
+   Fallbacks *-fb nutzen local()-Systemfonts mit size-adjust/ascent/descent,
+   sodass der Swap metrisch deckungsgleich ist (kein Layout-Shift, kein Sprung).
+   unicode-range: latin (de/en inkl. Umlaute, €, –—). */
+@font-face {
+  font-family: 'Bangers';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/bangers-latin-400.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Bangers-fb';
+  src: local('Arial Black');
+  size-adjust: 64.06%;
+  ascent-override: 88.30%;
+  descent-override: 18.10%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Press Start 2P';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/press-start-2p-latin-400.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'PS2P-fb';
+  src: local('Courier New');
+  size-adjust: 166.64%;
+  ascent-override: 100.00%;
+  descent-override: 0.00%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/roboto-latin-var.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Roboto-fb';
+  src: local('Arial');
+  size-adjust: 96.76%;
+  ascent-override: 104.79%;
+  descent-override: 27.10%;
+  line-gap-override: 0%;
+}
+
 /* Custom Scrollbar to match original design */
 ::-webkit-scrollbar {
   width: 8px;
@@ -47,6 +101,47 @@ html, body {
   to { transform: rotate(360deg); }
 }
 
+/* WarpScreen: Sector-Jump-Motion (nur transform/opacity, GPU-freundlich) */
+@keyframes warp-ring-rotate {
+  to { transform: rotate(360deg); }
+}
+@keyframes warp-streak-pulse {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.6; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .warp-animated {
+    animation: none !important;
+  }
+}
+
+/* Same-Origin Seitenwechsel: Comic-Warp-Wipe (View Transitions API).
+   Cross-Document-Navigationen (Domain-Wechsel) sind davon ausgenommen —
+   dort trägt der WarpScreen die Kontinuität. */
+@view-transition {
+  navigation: auto;
+}
+::view-transition-old(root) {
+  animation: warp-wipe-out 0.32s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+::view-transition-new(root) {
+  animation: warp-wipe-in 0.32s cubic-bezier(0.32, 0.72, 0, 1) backwards;
+}
+@keyframes warp-wipe-out {
+  from { opacity: 1; transform: translateX(0) skewX(0deg); filter: brightness(1); }
+  to { opacity: 0; transform: translateX(-4vw) skewX(-4deg); filter: brightness(1.6) saturate(1.4); }
+}
+@keyframes warp-wipe-in {
+  from { opacity: 0; transform: translateX(4vw) skewX(4deg); filter: brightness(1.6) saturate(1.4); }
+  to { opacity: 1; transform: translateX(0) skewX(0deg); filter: brightness(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}
+
 /* Editor Specific Overrides for WYSIWYG Content */
 .editor-content ul {
     list-style-type: disc !important;
@@ -65,7 +160,7 @@ html, body {
     margin-bottom: 0.25rem;
 }
 .editor-content h1, .editor-content h2, .editor-content h3 {
-    font-family: 'Bangers', cursive;
+    font-family: 'Bangers', 'Bangers-fb', 'Arial Black', Impact, sans-serif;
     color: white;
     line-height: 1.2;
     margin-top: 1.5em;

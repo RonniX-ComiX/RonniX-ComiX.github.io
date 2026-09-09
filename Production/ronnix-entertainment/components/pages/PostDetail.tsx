@@ -185,10 +185,14 @@ const CommentItem: React.FC<{
                              </button>
                         </div>
                         
-                        {currentUserId && depth < 3 && (
-                            <button 
-                                onClick={() => setIsReplying(!isReplying)}
-                                className={`flex items-center gap-1 text-xs font-bold uppercase tracking-wider transition-colors ${isReplying ? 'text-white' : 'text-gray-500 hover:text-white'}`}
+                        {/* Reply: immer gemountet (kein Layout-Sprung bei Silent-Login), ohne Session disabled */}
+                        {depth < 3 && (
+                            <button
+                                onClick={() => currentUserId && setIsReplying(!isReplying)}
+                                disabled={!currentUserId}
+                                aria-disabled={!currentUserId}
+                                title={currentUserId ? undefined : 'Login zum Antworten'}
+                                className={`flex items-center gap-1 text-xs font-bold uppercase tracking-wider transition-colors ${isReplying ? 'text-white' : 'text-gray-500 hover:text-white'} disabled:cursor-not-allowed disabled:opacity-60`}
                             >
                                 <Reply size={14} /> Reply
                             </button>

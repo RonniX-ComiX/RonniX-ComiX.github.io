@@ -1,12 +1,25 @@
-
+/**
+ * Navbar.tsx — Hauptnavigation mit Domain-Links und SSO-Weitergabe.
+ *
+ * Feature: rendert Kategorie-Links (`getLinkUrl`), erkennt aktiven Bereich je
+ * Domain und gibt bei explizitem Klick auf eine Fremd-Domain die Session per
+ * SSO-Token mit (Fragment-Transport, `location.replace`, Prefetch bei Hover).
+ * Gäste navigieren nativ ohne Token/Overlay. Use Cases: alle Domain-Wechsel per
+ * Klick. Gehört NICHT hierher: stiller Auto-Login (SSOAutoLogin), Token-Config
+ * (`utils/ssoConfig.ts`).
+ */
 
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Home, User, LogOut, Globe, Palette, BookOpen, Gamepad2, Mail, Film, Tv, Newspaper, Loader2, Rocket } from 'lucide-react';
+import { Menu, X, Home, User, LogOut, Globe, Palette, BookOpen, Gamepad2, Mail, Film, Tv, Newspaper } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCrossDomainToken } from '../hooks/useCrossDomainToken';
 import { useLanguage } from '../context/LanguageContext';
 import { AuthModal } from './AuthModal';
-import { getLinkUrl, getCurrentCategory, getTargetCategory } from '../utils/domainConfig';
+import { AuthSlot } from './AuthSlot';
+import { WarpScreen } from './WarpScreen';
+import { getLinkUrl, getCurrentCategory, getTargetCategory, isLocalhost } from '../utils/domainConfig';
+import { buildSsoUrl } from '../utils/ssoValidation';
 
 // Comic-Style SVG Flags
 const FlagDE = ({ className }: { className?: string }) => (
@@ -27,28 +40,9 @@ const FlagEN = ({ className }: { className?: string }) => (
   </svg>
 );
 
-// Full Screen Transition Overlay
-const WarpOverlay: React.FC = () => (
-    <div className="fixed inset-0 z-[100] bg-neutral-950 flex flex-col items-center justify-center animate-fade-in overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-900/20 via-black to-black opacity-80"></div>
-        
-        {/* Speed Lines Effect */}
-        <div className="absolute inset-0 overflow-hidden opacity-30">
-             <div className="absolute top-[50%] left-[50%] w-[200vw] h-[2px] bg-white shadow-[0_0_10px_white] -translate-x-1/2 -translate-y-1/2 rotate-45 animate-pulse"></div>
-             <div className="absolute top-[50%] left-[50%] w-[200vw] h-[2px] bg-red-500 shadow-[0_0_15px_red] -translate-x-1/2 -translate-y-1/2 -rotate-45 animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-        </div>
-
-        <div className="relative z-10 flex flex-col items-center gap-6">
-            <div className="relative">
-                 <div className="absolute inset-0 bg-red-600 blur-2xl rounded-full animate-pulse"></div>
-                 <Rocket size={64} className="text-white relative z-10 animate-bounce" />
-            </div>
-            <h2 className="text-3xl font-retro text-white tracking-widest uppercase drop-shadow-[0_0_10px_rgba(220,38,38,0.8)]">
-                Warp Drive Active
-            </h2>
-            <p className="text-red-400 font-mono text-sm animate-pulse">Transferring Credentials...</p>
-        </div>
-    </div>
+// Full Screen Transition Overlay (einheitlicher WarpScreen, Zielsektor-Readout via Props)
+const WarpOverlay: React.FC<{ targetLabel: string | null }> = ({ targetLabel }) => (
+    <WarpScreen phase="transfer" targetLabel={targetLabel} />
 );
 
 interface NavItemProps {
@@ -58,49 +52,50 @@ interface NavItemProps {
   onClick?: () => void;
   isActive: boolean; // Receive active state as prop
   currentLang: string;
-  setGlobalWarp: (state: boolean) => void;
+  setGlobalWarp: (active: boolean, targetLabel?: string | null) => void;
 }
 
 const NavItem: React.FC<NavItemProps> = ({ link, className, children, onClick, isActive, currentLang, setGlobalWarp }) => {
-    const { currentUser, getCrossDomainToken } = useAuth();
-    
+    const { currentUser } = useAuth();
+    const { getToken, prefetch } = useCrossDomainToken();
+
     // Pass currentLang to getLinkUrl to append ?lang=... if external
     const { url, isExternal } = getLinkUrl(link.href, currentLang);
-    
+
     const handleClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
         // Always close mobile menu immediately
         if (onClick) onClick();
 
-        // LOGIC OPTIMIZATION:
-        // Only trigger the "Warp" effect and SSO logic if:
-        // 1. The link is external (points to another domain)
-        // 2. AND we have a logged-in user who needs their session transferred.
-        
-        if (isExternal && currentUser) {
+        // SSO-Logik nur, wenn:
+        // 1. Der Link extern ist (andere Domain)
+        // 2. AND ein eingeloggter User seine Session mitnehmen muss.
+        // 3. AND wir NICHT auf localhost sind (eine Origin = geteilter Login).
+
+        if (isExternal && currentUser && !isLocalhost()) {
             e.preventDefault();
-            // Trigger the full screen overlay
-            setGlobalWarp(true);
-            
+            // Overlay als Paint-Brücke bis zum Unload (kein künstliches Delay).
             try {
-                // Fetch short-lived custom token from backend
-                const token = await getCrossDomainToken();
-                
+                setGlobalWarp(true, new URL(url).hostname.toUpperCase());
+            } catch {
+                setGlobalWarp(true, null);
+            }
+
+            try {
+                // Fetch short-lived custom token from backend (Cache + Timeout in AuthContext)
+                const token = await getToken();
+
                 if (token) {
                     const targetUrl = new URL(url);
                     const returnPath = targetUrl.pathname + targetUrl.search;
-                    const ssoUrl = `${targetUrl.origin}/sso?token=${token}&returnUrl=${encodeURIComponent(returnPath)}`;
-                    
-                    // Small delay to let the user see the cool effect, then warp
-                    setTimeout(() => {
-                        window.location.href = ssoUrl;
-                    }, 300);
-                } else {
-                    // Fallback if token fails
-                    window.location.href = url;
+                    // Fragment-Transport: Token nie im Query → nie in Server-Logs.
+                    window.location.replace(buildSsoUrl(targetUrl.origin, token, returnPath));
+                    return;
                 }
+                // Fallback if token fails
+                window.location.replace(url);
             } catch (error) {
-                console.error("Navigation SSO Error", error);
-                window.location.href = url;
+                console.error('[sso] Navigations-Fehler, direkter Link als Fallback', error);
+                window.location.replace(url);
             }
         }
         // GUEST MODE:
@@ -110,10 +105,12 @@ const NavItem: React.FC<NavItemProps> = ({ link, className, children, onClick, i
 
     if (isExternal) {
         return (
-            <a 
-                href={url} 
+            <a
+                href={url}
                 className={className}
                 onClick={handleClick}
+                onMouseEnter={currentUser ? prefetch : undefined}
+                onFocus={currentUser ? prefetch : undefined}
             >
                 {children}
             </a>
@@ -131,9 +128,16 @@ export const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isWarping, setIsWarping] = useState(false); // Global Warp State
+  const [warpTarget, setWarpTarget] = useState<string | null>(null);
+
+  /** Aktiviert das Warp-Overlay inkl. Zielsektor-Readout. */
+  const showWarp = (active: boolean, targetLabel?: string | null) => {
+    setWarpTarget(active ? (targetLabel ?? null) : null);
+    setIsWarping(active);
+  };
 
   const location = useLocation();
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, loading: authLoading } = useAuth();
   const { t, language, setLanguage } = useLanguage();
   const currentCategory = getCurrentCategory();
 
@@ -275,7 +279,7 @@ export const Navbar: React.FC = () => {
 
   return (
     <>
-      {isWarping && <WarpOverlay />}
+      {isWarping && <WarpOverlay targetLabel={warpTarget} />}
       
       <nav 
         className={`sticky top-0 z-50 transition-all duration-300 border-b border-red-900/50 ${
@@ -308,7 +312,7 @@ export const Navbar: React.FC = () => {
                   link={link}
                   isActive={active}
                   currentLang={language}
-                  setGlobalWarp={setIsWarping}
+                  setGlobalWarp={showWarp}
                   className={`font-retro text-xl xl:text-2xl tracking-widest relative group py-2 transition-transform duration-300 flex items-center gap-2 transform-gpu subpixel-antialiased will-change-transform ${
                     active ? `scale-105 ${styles.activeText}` : `text-gray-400 ${styles.hoverText}`
                   }`}
@@ -362,10 +366,23 @@ export const Navbar: React.FC = () => {
               </div>
             </button>
 
-            {/* Desktop Auth Button */}
+            {/* Desktop Auth Button (sprungfrei: fixe Slot-Fläche + Crossfade, Name trunkiert) */}
+            <AuthSlot
+              label="Community-Login"
+              slotKey={authLoading ? 'loading' : currentUser ? `u:${currentUser.uid}` : 'guest'}
+              loading={authLoading}
+              placeholder={
+                <span
+                  aria-hidden="true"
+                  className="font-retro tracking-wider px-4 xl:px-6 py-2 rounded-sm border border-transparent ml-2 invisible pointer-events-none select-none"
+                >
+                  <span className="block text-lg">&nbsp;</span>
+                </span>
+              }
+            >
             {currentUser ? (
               <div className="flex items-center gap-2 xl:gap-4 pl-4 border-l-2 border-neutral-800">
-                <Link to="/profile" className="font-retro text-lg tracking-wide text-gray-300 hover:text-white transition-colors">
+                <Link to="/profile" className="font-retro text-lg tracking-wide text-gray-300 hover:text-white transition-colors max-w-[140px] truncate">
                    {currentUser.displayName || 'Hero'}
                 </Link>
                 <button 
@@ -386,6 +403,7 @@ export const Navbar: React.FC = () => {
                 </span>
               </button>
             )}
+            </AuthSlot>
           </div>
 
           {/* Mobile Menu Button */}
@@ -419,7 +437,7 @@ export const Navbar: React.FC = () => {
                   link={link}
                   isActive={active}
                   currentLang={language}
-                  setGlobalWarp={setIsWarping}
+                  setGlobalWarp={showWarp}
                   className={`font-retro text-2xl tracking-widest transition-all duration-300 group flex items-center gap-3 ${
                     active 
                       ? `${styles.activeText} drop-shadow-[2px_2px_0_rgba(255,255,255,0.1)]` 
@@ -469,17 +487,30 @@ export const Navbar: React.FC = () => {
 
             <div className="w-full h-px bg-neutral-800 my-4"></div>
 
-            {/* User Section Mobile */}
+            {/* User Section Mobile (sprungfrei: fixe Slot-Fläche + Crossfade) */}
             <div className="w-full flex flex-col items-end gap-4">
+            <AuthSlot
+              label="Community-Login"
+              slotKey={authLoading ? 'loading' : currentUser ? `u:${currentUser.uid}` : 'guest'}
+              loading={authLoading}
+              placeholder={
+                <span
+                  aria-hidden="true"
+                  className="px-6 py-3 rounded-sm font-retro text-xl invisible pointer-events-none select-none"
+                >
+                  &nbsp;
+                </span>
+              }
+            >
               {currentUser ? (
                 <>
                    <Link 
                      to="/profile" 
-                     className="text-right group"
+                     className="text-right group block max-w-full"
                      onClick={() => setIsOpen(false)}
                    >
                      <p className="text-gray-400 text-sm font-sans mb-1">{t.navigation.navbar.loggedInAs}</p>
-                     <p className="text-2xl font-retro text-white group-hover:text-red-500 transition-colors">
+                     <p className="text-2xl font-retro text-white group-hover:text-red-500 transition-colors truncate max-w-[220px]">
                        {currentUser.displayName || currentUser.email}
                      </p>
                    </Link>
@@ -498,6 +529,7 @@ export const Navbar: React.FC = () => {
                   {t.navigation.navbar.communityLogin} <User size={20} />
                 </button>
               )}
+            </AuthSlot>
             </div>
           </div>
         </div>

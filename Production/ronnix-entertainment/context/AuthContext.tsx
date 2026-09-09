@@ -1,14 +1,60 @@
+/**
+ * AuthContext.tsx — Firebase-Auth-Status, Global Logout und Cross-Domain-Token.
+ *
+ * Feature: stellt `currentUser`/`isAdmin` bereit, hört Global-Logout-Signale
+ * (`logoutSignals/{uid}`, Legacy `users/{uid}.lastLogoutAt`), erzeugt kurzlebige
+ * Cross-Domain-Tokens (`generateCrossDomainToken`, mit Timeout + Kurz-Cache) und
+ * schließt Google-Redirect-Logins ab (`getRedirectResult`, damit der Seed nach
+ * `signInWithRedirect` nicht verloren geht). Use Cases: alle SSO-Flows, Navbar,
+ * AuthModal. Benutzung: `const { currentUser, getCrossDomainToken, logout } = useAuth();`
+ * Gehört NICHT hierher: URL-Bau/Validierung (`utils/ssoValidation.ts`), Routing.
+ */
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { auth, db, functions } from '../firebase';
-import { onAuthStateChanged, User, signOut as firebaseSignOut } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore';
+import {
+  onAuthStateChanged,
+  User,
+  signOut as firebaseSignOut,
+  getRedirectResult,
+} from 'firebase/auth';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { getCurrentCategory } from '../utils/domainConfig';
+import { getCurrentCategory, isLocalhost } from '../utils/domainConfig';
+import { SSO_CONFIG, getSsoMainOrigin } from '../utils/ssoConfig';
 
 // Hardcoded Admin UID matches firestore.rules
 // Optimizes backend usage by avoiding a DB read for every page load
 const ADMIN_UID = 'nRMiuZsj4GZQ0siYXFOqXVCc7mB2';
+
+/** Kurz-Cache für Cross-Domain-Token (ein Token pro Tab, bis ~30 Min, siehe SSO_CONFIG). */
+let cachedToken: { token: string; expiresAt: number } | null = null;
+
+/** Löscht den Token-Cache (z. B. bei Logout). */
+export function clearSsoTokenCache(): void {
+  cachedToken = null;
+}
+
+/**
+ * Merkt, dass auf irgendeiner Domain eingeloggt wurde (Heuristik für
+ * Silent-Check-Fallback). Kein Token, nur Zeitstempel.
+ */
+function setLoginHint(): void {
+  try {
+    localStorage.setItem(SSO_CONFIG.loginHintKey, String(Date.now()));
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Entfernt den Login-Hinweis (expliziter Logout). */
+function clearLoginHint(): void {
+  try {
+    localStorage.removeItem(SSO_CONFIG.loginHintKey);
+  } catch {
+    /* ignore */
+  }
+}
 
 interface AuthContextType {
   currentUser: User | null;
@@ -37,26 +83,55 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // 1. Monitor Auth State
+  // 1. Monitor Auth State (+ Redirect-Abschluss für Google-Login via Redirect)
   useEffect(() => {
+    let cancelled = false;
+    // Schließt einen evtl. ausstehenden Google-Redirect-Login ab (z. B. nach
+    // signInWithRedirect aus AuthModal — dort ist das Modal nach Reload zu).
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (cancelled || !result?.user) return;
+        console.info('[sso] Google-Redirect-Login abgeschlossen');
+        const user = result.user;
+        try {
+          await setDoc(
+            doc(db, 'users', user.uid),
+            { uid: user.uid, displayName: user.displayName || 'Anonymous Hero', photoURL: user.photoURL || '' },
+            { merge: true },
+          );
+          if (user.email) {
+            await setDoc(
+              doc(db, 'usersPrivate', user.uid),
+              { email: user.email, updatedAt: new Date().toISOString() },
+              { merge: true },
+            ).catch(() => {});
+          }
+        } catch (e) {
+          console.error('[auth] Redirect-User-Sync fehlgeschlagen', e);
+        }
+        setLoginHint();
+      })
+      .catch(() => {});
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (cancelled) return;
       setCurrentUser(user);
-      
+
       if (user) {
         // Optimization: Check UID directly instead of fetching DB document
-        if (user.uid === ADMIN_UID) {
-            setIsAdmin(true);
-        } else {
-            setIsAdmin(false);
-        }
+        setIsAdmin(user.uid === ADMIN_UID);
+        setLoginHint();
       } else {
         setIsAdmin(false);
       }
-      
+
       setLoading(false);
     });
 
-    return unsubscribe;
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, []);
 
   // 2. Realtime Global Logout Listener (logoutSignals, mit Legacy-Fallback users)
@@ -71,6 +146,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 const currentSessionTime = new Date(currentUser.metadata.lastSignInTime || 0).getTime();
                 if (lastLogoutTime > currentSessionTime + 2000) {
                     console.log("Global logout detected. Signing out local session...");
+                    clearSsoTokenCache();
+                    clearLoginHint();
+                    try {
+                      sessionStorage.setItem(SSO_CONFIG.checkedKey, 'true');
+                    } catch { /* ignore */ }
                     firebaseSignOut(auth).then(() => {
                          window.location.href = '/';
                     });
@@ -91,18 +171,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     // 1. Sign out locally immediately
+    clearSsoTokenCache();
+    clearLoginHint();
+    try {
+      // Loop-Schutz: derselbe Key, den SSOAutoLogin liest.
+      sessionStorage.setItem(SSO_CONFIG.checkedKey, 'true');
+    } catch { /* ignore */ }
     await firebaseSignOut(auth);
 
     // 2. Determine if we need a Global Logout Redirect
+    // Auf localhost: nur lokal ausloggen, nie auf Live-Domains springen.
+    if (isLocalhost()) return;
     const currentCategory = getCurrentCategory();
-    
+
     if (currentCategory !== 'main') {
-        const mainDomain = 'https://ronnixentertainment.de';
-        const returnUrl = window.location.href; 
-        
-        sessionStorage.setItem('ronnix_logged_out', 'true');
-        
-        window.location.href = `${mainDomain}/global-logout?returnUrl=${encodeURIComponent(returnUrl)}`;
+        const mainOrigin = getSsoMainOrigin();
+        const returnUrl = window.location.href;
+
+        window.location.replace(`${mainOrigin}/global-logout?returnUrl=${encodeURIComponent(returnUrl)}`);
     } else {
        try {
            const globalSignOutFn = httpsCallable(functions, 'globalSignOut');
@@ -113,20 +199,61 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const getCrossDomainToken = async (): Promise<string | null> => {
+  /**
+   * Erzeugt ein Cross-Domain-Token (mit Timeout + Lang-Cache + Timing).
+   * Warm-Strategie: nach Login und bei Tab-Rückkehr still vorausgeholt, damit
+   * Domain-Klicks den Cache treffen. Loggt nur Dauer/Länge, nie Token-Inhalte.
+   */
+  const getCrossDomainToken = useCallback(async (): Promise<string | null> => {
+    const startedAt = typeof performance !== 'undefined' ? performance.now() : 0;
+    console.info('[sso] getCrossDomainToken aufgerufen', { hasUser: !!currentUser });
     if (!currentUser) {
-        console.warn("SSO: No user logged in, cannot generate token.");
+        console.warn('[sso] kein User, kein Token');
         return null;
+    }
+    if (cachedToken && cachedToken.expiresAt > Date.now()) {
+      console.info('[sso] Token aus Cache');
+      return cachedToken.token;
     }
     try {
         const generateToken = httpsCallable<void, { token: string }>(functions, 'generateCrossDomainToken');
-        const result = await generateToken();
-        return result.data.token;
+        const timeout = new Promise<never>((_, reject) => {
+          window.setTimeout(() => reject(new Error(`sso-token-timeout-${SSO_CONFIG.tokenTimeoutMs}ms`)), SSO_CONFIG.tokenTimeoutMs);
+        });
+        const result = (await Promise.race([generateToken(), timeout])) as { data: { token: string } };
+        const token = result?.data?.token ?? null;
+        if (token) {
+          cachedToken = { token, expiresAt: Date.now() + SSO_CONFIG.tokenCacheMs };
+          console.info('[sso] Token erhalten', {
+            length: token.length,
+            type: 'customToken',
+            durationMs: startedAt ? Math.round(performance.now() - startedAt) : -1,
+          });
+        }
+        return token;
     } catch (error: any) {
-        console.error("SSO Token Generation Failed:", error);
+        console.error('[sso] Token-Erzeugung fehlgeschlagen', {
+          error,
+          durationMs: startedAt ? Math.round(performance.now() - startedAt) : -1,
+        });
         return null;
     }
-  };
+  }, [currentUser]);
+
+  // Warm-Token: nach Login still vorausfüllen, damit der erste Klick Cache trifft.
+  const tokenFnRef = useRef(getCrossDomainToken);
+  tokenFnRef.current = getCrossDomainToken;
+  useEffect(() => {
+    if (currentUser) void tokenFnRef.current();
+  }, [currentUser]);
+  // Warm-Token: bei Tab-Rückkehr nachfüllen, falls Cache inzwischen ablief.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void tokenFnRef.current();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
 
   const value = {
     currentUser,

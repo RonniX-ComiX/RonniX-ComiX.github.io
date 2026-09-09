@@ -503,7 +503,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
 
         /* Headings */
         .editor-content h1, .editor-content h2, .editor-content h3 {
-            font-family: 'Bangers', cursive;
+            font-family: 'Bangers', 'Bangers-fb', 'Arial Black', Impact, sans-serif;
             color: white;
             line-height: 1.2;
             margin-top: 1.5em;

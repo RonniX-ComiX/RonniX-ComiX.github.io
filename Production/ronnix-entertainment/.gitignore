@@ -1,3 +1,8 @@
+# Secrets — Firebase Service-Account-Keys nie committen
+secret/
+*-key.json
+service-account*.json
+
 # Logs
 logs
 *.log

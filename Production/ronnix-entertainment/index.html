@@ -46,10 +46,18 @@
     <meta name="msapplication-TileColor" content="#000000">
     <meta name="theme-color" content="#0a0a0a">
 
-    <!-- Performance & Security Hints -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Performance & Security Hints (kein Google-Fonts-CDN mehr: Fonts sind selbst gehostet) -->
     <link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
+    <!-- SSO: Preconnect zu den 5 Schwester-Domains + Functions-Origin (schnellere Domain-Wechsel) -->
+    <link rel="preconnect" href="https://ronnixcomix.de">
+    <link rel="preconnect" href="https://ronnixboox.de">
+    <link rel="preconnect" href="https://lamazgamez.de">
+    <link rel="preconnect" href="https://ronnixmoviez.de">
+    <link rel="preconnect" href="https://ronnixseriez.de">
+    <link rel="preconnect" href="https://europe-west1-ronnix-comix.cloudfunctions.net">
+    <link rel="dns-prefetch" href="https://firestore.googleapis.com">
+    <link rel="dns-prefetch" href="https://identitytoolkit.googleapis.com">
+    <link rel="dns-prefetch" href="https://securetoken.googleapis.com">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     
     <!-- DEV_ONLY_START -->
@@ -72,9 +80,9 @@
               }
             },
             fontFamily: {
-              'retro': ['Bangers', 'cursive'],
-              'gaming': ['"Press Start 2P"', 'cursive'],
-              'sans': ['Roboto', 'sans-serif'],
+              'retro': ['Bangers', 'Bangers-fb', 'Arial Black', 'Impact', 'sans-serif'],
+              'gaming': ['"Press Start 2P"', 'PS2P-fb', '"Courier New"', 'monospace'],
+              'sans': ['Roboto', 'Roboto-fb', 'Arial', 'sans-serif'],
               'serif': ['Georgia', 'serif'],
             },
             animation: {
@@ -97,8 +105,12 @@
     </script>
     <!-- DEV_ONLY_END -->
 
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Press+Start+2P&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Fonts: selbst gehostet (public/fonts/), kein Google-CDN zur Laufzeit.
+         Preload der kritischen Schnitte (Navbar/Body), damit der First Paint
+         direkt mit Marken-Fonts malt statt zu swappen. Metrisch angepasste
+         local()-Fallbacks in index.css fangen den Rest ohne Shift ab. -->
+    <link rel="preload" href="/fonts/bangers-latin-400.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/roboto-latin-var.woff2" as="font" type="font/woff2" crossorigin>
     
     <style>
       /* CRITICAL CSS: Prevent White Flash (Inline for instant load) */

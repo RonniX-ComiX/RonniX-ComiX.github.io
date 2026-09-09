@@ -1,7 +1,25 @@
+/**
+ * SSOBounce.tsx — Auth-Authority auf der Main-Domain (sichtbar + still).
+ *
+ * Feature: `/sso-bounce?callback=...&final_path=...&mode=...`. Voll-Modus (klassisch):
+ * volle Seite, Token via Fragment (`#token=`, nie Server-Logs) zurück an Callback.
+ * Still-Modus (`mode=silent`, aus Hidden-Iframe): KEINE Navigation, Antwort per
+ * postMessage an Parent (Token nie in URL). Gäste → `{status:'guest'}`.
+ * Use Cases: Auto-Login (still), Fallback-Bounce (voll). Sicherheit: Callback gegen
+ * Allowlist (`sanitizeCallbackUrl`), Fehler-Tipp nur in DEV, kein langes Blockieren.
+ * Gehört NICHT hierher: Token-Erzeugung (Backend), Empfang (SilentCheck/Callback).
+ */
+
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Loader2, ShieldCheck, XCircle, AlertTriangle } from 'lucide-react';
+import { WarpScreen } from '../../components/WarpScreen';
+import {
+  sanitizeCallbackUrl,
+  sanitizeReturnUrl,
+  buildSsoUrl,
+} from '../../utils/ssoValidation';
+import { isSsoAllowedOrigin } from '../../utils/ssoConfig';
 
 export const SSOBounce: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -9,104 +27,110 @@ export const SSOBounce: React.FC = () => {
     const [status, setStatus] = useState('Prüfe Sicherheitsfreigabe...');
     const [errorDetails, setErrorDetails] = useState<string | null>(null);
 
+    const mode = searchParams.get('mode');
+    const isSilent = mode === 'silent';
+
     useEffect(() => {
         if (loading) return;
 
         const performBounce = async () => {
             // The URL where we want to send the result back (e.g. https://ronnixcomix.de/sso)
-            const returnCallback = searchParams.get('callback');
+            const rawCallback = searchParams.get('callback');
             // The final path the user wanted to see (e.g. /post/123)
-            const finalPath = searchParams.get('final_path') || '/';
+            const finalPath = sanitizeReturnUrl(searchParams.get('final_path') || '/');
 
-            if (!returnCallback) {
-                setStatus('Fehler: Kein Rücksprungziel definiert.');
-                return;
-            }
-
-            // Allowlist gegen offenen Redirect (nur eigene 6 Domains)
-            const allowedHosts = ['ronnixentertainment.de', 'ronnixcomix.de', 'ronnixboox.de', 'lamazgamez.de', 'ronnixmoviez.de', 'ronnixseriez.de', 'localhost'];
-            try {
-              const cbHost = new URL(returnCallback).hostname.toLowerCase();
-              if (!allowedHosts.some(h => cbHost === h || cbHost.endsWith('.' + h))) {
+            const callback = sanitizeCallbackUrl(rawCallback);
+            if (!callback) {
+                console.warn('[sso] Bounce ohne gültiges Callback');
+                if (isSilent) return; // Parent läuft in Timeout → Gast, keine Navigation.
                 setStatus('Fehler: Ungültiges Rücksprungziel.');
                 return;
-              }
-            } catch {
-              setStatus('Fehler: Ungültiges Rücksprungziel.');
-              return;
+            }
+            const targetOrigin = new URL(callback).origin;
+            if (!isSsoAllowedOrigin(targetOrigin)) {
+                if (isSilent) return;
+                setStatus('Fehler: Ungültiges Rücksprungziel.');
+                return;
             }
 
+            // ---- Still-Modus: per postMessage antworten, nie navigieren ----
+            if (isSilent) {
+                if (currentUser) {
+                    console.info('[sso] Silent-Bounce: User vorhanden, erzeuge Token');
+                    try {
+                        const token = await getCrossDomainToken();
+                        if (token) {
+                            window.parent.postMessage(
+                                { source: 'ronnix-sso', status: 'token', token, returnUrl: finalPath },
+                                targetOrigin,
+                            );
+                            console.info('[sso] Silent-Bounce: Token gesendet', { length: token.length });
+                            return;
+                        }
+                        throw new Error('Token was empty');
+                    } catch (e) {
+                        console.error('[sso] Silent-Bounce Token-Fehler', e);
+                    }
+                } else {
+                    console.info('[sso] Silent-Bounce: Gast');
+                }
+                window.parent.postMessage(
+                    { source: 'ronnix-sso', status: 'guest', returnUrl: finalPath },
+                    targetOrigin,
+                );
+                return;
+            }
+
+            // ---- Voll-Modus (Fallback): navigieren, Token im Fragment ----
             if (currentUser) {
                 setStatus('Identität bestätigt. Generiere Passierschein...');
                 try {
                     const token = await getCrossDomainToken();
                     if (token) {
-                        // Success: Redirect back with token
-                        const targetUrl = new URL(returnCallback);
-                        targetUrl.searchParams.set('token', token);
-                        targetUrl.searchParams.set('returnUrl', finalPath);
-                        
-                        window.location.replace(targetUrl.toString());
+                        window.location.replace(buildSsoUrl(targetOrigin, token, finalPath));
                         return;
-                    } else {
-                        throw new Error("Token was empty");
                     }
+                    throw new Error("Token was empty");
                 } catch (e: any) {
-                    console.error("Bounce Token Error", e);
-                    
-                    // Show detailed error for debugging if it looks like a config issue
-                    if (e.message && (e.message.includes('internal') || e.message.includes('permission'))) {
+                    console.error("[sso] Bounce Token-Fehler", e);
+                    if (import.meta.env.DEV && e?.message && (String(e.message).includes('internal') || String(e.message).includes('permission'))) {
                          setStatus('Server-Fehler bei der Token-Erstellung.');
-                         setErrorDetails('TIPP: Hast du die "IAM Service Account Credentials API" in der Google Cloud Console aktiviert?');
-                         
-                         // Wait 5 seconds so the developer can read the error, then redirect as guest
-                         await new Promise(r => setTimeout(r, 6000));
+                         setErrorDetails('TIPP (nur DEV): "IAM Service Account Credentials API" in der Google Cloud Console aktivieren.');
+                         await new Promise(r => setTimeout(r, 1500));
                     }
                 }
             }
 
             // Fallback (Not logged in OR Error): Redirect back as guest
-            const targetUrl = new URL(returnCallback);
+            const targetUrl = new URL(callback);
             targetUrl.searchParams.set('status', 'guest');
             targetUrl.searchParams.set('returnUrl', finalPath);
             window.location.replace(targetUrl.toString());
         };
 
         performBounce();
-    }, [currentUser, loading, getCrossDomainToken, searchParams]);
+    }, [currentUser, loading, getCrossDomainToken, searchParams, isSilent]);
+
+    // Still-Modus: minimale Seite, damit das Iframe schnell lädt.
+    if (isSilent) return null;
+
+    // Vollmodus im einheitlichen WarpScreen (System-Fonts, kein FOUT).
+    const targetLabel = (() => {
+        try {
+            const raw = searchParams.get('callback');
+            return raw ? new URL(raw).hostname.toUpperCase() : null;
+        } catch {
+            return null;
+        }
+    })();
+    const failed = status.startsWith('Fehler') || status.startsWith('Server-Fehler');
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-neutral-950 px-6">
-            <div className="flex flex-col items-center gap-6 animate-fade-in">
-                <div className="relative">
-                    <div className="absolute inset-0 bg-red-600/20 blur-xl rounded-full animate-pulse"></div>
-                    <img src="/favicons/android-chrome-192x192.png" alt="Logo" className="w-24 h-24 relative z-10" />
-                </div>
-                
-                <div className="bg-neutral-900 border border-neutral-800 p-8 rounded-xl text-center max-w-md shadow-2xl">
-                    <h2 className="text-2xl font-retro text-white mb-4">RonniX Central Core</h2>
-                    
-                    <div className="flex flex-col items-center justify-center gap-3 text-gray-400">
-                        {errorDetails ? (
-                             <AlertTriangle className="text-yellow-500 w-10 h-10 mb-2" />
-                        ) : loading ? (
-                            <Loader2 className="animate-spin text-red-500 w-8 h-8" />
-                        ) : currentUser ? (
-                            <ShieldCheck className="text-green-500 w-8 h-8" />
-                        ) : (
-                            <XCircle className="text-gray-500 w-8 h-8" />
-                        )}
-                        
-                        <p className="text-lg font-bold">{status}</p>
-                        
-                        {errorDetails && (
-                            <div className="mt-4 p-3 bg-red-900/20 border border-red-800 rounded text-sm text-red-200">
-                                {errorDetails}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
+        <WarpScreen
+            phase={failed ? 'error' : loading ? 'preparing' : 'transfer'}
+            targetLabel={targetLabel}
+            message={failed ? null : status}
+            error={failed ? (errorDetails ? `${status} ${errorDetails}` : status) : null}
+        />
     );
 };

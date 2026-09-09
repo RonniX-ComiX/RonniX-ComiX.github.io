@@ -13,7 +13,6 @@ import {
 } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
 import { getStorage } from 'firebase/storage';
-import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import { getRemoteConfig, fetchAndActivate } from 'firebase/remote-config';
 
 // Firebase Config via Vite Env (VITE_*), mit Fallback für lokale Dev-Umgebung.
@@ -23,8 +22,9 @@ const firebaseConfig = {
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "ronnix-comix.firebaseapp.com",
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "ronnix-comix",
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "ronnix-comix.firebasestorage.app",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "915988998321",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:915988998321:web:4dd91b767103c573695a90",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-JGMLYWZ0JB",
 };
 
 // Reuse App für vite-ssg Prerender (kein Doppel-Init)
@@ -50,18 +50,8 @@ export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-// App Check (Blaze aktiv): schützt Functions/Firestore vor Abuse.
-// Erfordert reCAPTCHA v3 Site-Key als VITE_RECAPTCHA_V3_SITE_KEY + Aktivierung in Console.
-if (typeof window !== 'undefined' && import.meta.env.VITE_RECAPTCHA_V3_SITE_KEY) {
-  try {
-    initializeAppCheck(app, {
-      provider: new ReCaptchaV3Provider(import.meta.env.VITE_RECAPTCHA_V3_SITE_KEY),
-      isTokenAutoRefreshEnabled: true,
-    });
-  } catch {
-    // bereits initialisiert -> ignorieren
-  }
-}
+// Hinweis: App Check / reCAPTCHA bewusst entfernt (Kosten/Entscheidung 2026-09-09).
+// Abuse-Schutz läuft über Security Rules + serverseitige Functions-Validierung.
 
 // Remote Config: Feature-Flags ohne Redeploy (Cooldown, PageSize, Maintenance)
 export const remoteConfig = typeof window !== 'undefined' ? getRemoteConfig(app) : null;

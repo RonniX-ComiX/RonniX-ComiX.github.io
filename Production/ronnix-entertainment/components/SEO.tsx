@@ -10,6 +10,12 @@ interface SEOProps {
   type?: 'website' | 'article';
   canonicalPath?: string;
   noIndex?: boolean;
+  /**
+   * Markenreiner Tab-Titel ohne Präfix (nur Site-Name) für transiente Screens
+   * (SSO-Weiterleitung, Logout). Verhindert sichtbare Zwischentitel wie "SSO | ..."
+   * während der Weiterleitung.
+   */
+  bareTitle?: boolean;
 }
 
 const SITE_NAMES: Record<string, string> = {
@@ -27,7 +33,8 @@ export const SEO: React.FC<SEOProps> = ({
   image,
   type = 'website',
   canonicalPath,
-  noIndex = false
+  noIndex = false,
+  bareTitle = false
 }) => {
   const currentCategory = getCurrentCategory();
   let language: string = 'de';
@@ -41,7 +48,7 @@ export const SEO: React.FC<SEOProps> = ({
 
   const metaDescription = description || "RonniX Entertainment – Comics, Bücher, Games, Filme & Serien: Reviews, News und Community.";
   const metaImage = image || defaultImage;
-  const fullTitle = `${title} | ${siteName}`;
+  const fullTitle = bareTitle ? siteName : `${title} | ${siteName}`;
 
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ronnixentertainment.de';
   const href = typeof window !== 'undefined' ? window.location.href.split('?')[0] : origin;

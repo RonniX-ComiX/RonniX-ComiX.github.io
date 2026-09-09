@@ -1,3 +1,14 @@
+/**
+ * AuthModal.tsx — Login/Registrierung (E-Mail + Google) mit Upstream-Seed.
+ *
+ * Feature: meldet an, spiegelt Profil nach Firestore (`users` + PII-frei
+ * `usersPrivate`), stößt auf Subdomains den Upstream-Seed zur Main-Domain an
+ * (`/sso-seed`, Fragment-Transport, `location.replace`). Google nutzt Popup mit
+ * Redirect-Fallback; dessen Abschluss sichert global `AuthProvider` (Redirect-
+ * Rückkehr landet ohne offenes Modal). Gehört NICHT hierher: Token-Erzeugung
+ * (AuthContext), Seed-Empfang (SSOSeed).
+ */
+
 import React, { useState } from 'react';
 import { X, Mail, Lock, User as UserIcon, AlertCircle, Loader2 } from 'lucide-react';
 import { auth, googleProvider, db } from '../firebase';
@@ -5,7 +16,8 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithP
 import { doc, setDoc } from 'firebase/firestore';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
-import { getCurrentCategory } from '../utils/domainConfig';
+import { getCurrentCategory, isLocalhost } from '../utils/domainConfig';
+import { buildSeedUrl } from '../utils/ssoValidation';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -42,10 +54,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  // NEW: Helper to sync session to Main Domain (The "Seed")
+  // Helper to sync session to Main Domain (The "Seed")
+  // Auf localhost deaktiviert: eine Origin = geteilter Login, kein Seed nötig.
   const syncSessionToMain = async () => {
+      if (isLocalhost()) return false;
       const category = getCurrentCategory();
-      
+
       // If we are NOT on the main domain, we must push the session upstream
       if (category !== 'main') {
           // Keep loading true to prevent UI flicker
@@ -53,14 +67,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           try {
              const token = await getCrossDomainToken();
              if (token) {
-                 const mainDomain = 'https://ronnixentertainment.de';
-                 const returnUrl = window.location.href;
-                 // Redirect to seed endpoint
-                 window.location.href = `${mainDomain}/sso-seed?token=${token}&returnUrl=${encodeURIComponent(returnUrl)}`;
+                 // Seed mit Fragment-Transport (Token nie im Query) + replace (kein Seed in History)
+                 window.location.replace(buildSeedUrl(token, window.location.href));
                  return true; // Redirecting...
              }
           } catch (e) {
-              console.error("SSO Seed Failed", e);
+              console.error('[sso] Seed-Weiterleitung fehlgeschlagen, bleibe lokal', e);
               // Fallback: Just close modal and stay local
           }
       }

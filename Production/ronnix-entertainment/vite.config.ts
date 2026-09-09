@@ -16,11 +16,20 @@ const removeDevScripts = () => {
 };
 
 // https://vitejs.dev/config/
+// Lokales Test-Hosting läuft IMMER auf Port 4174 (dev + preview).
 export default defineConfig(({
   plugins: [
     react(),
     removeDevScripts()
   ],
+  server: {
+    port: 4174,
+    strictPort: true,
+  },
+  preview: {
+    port: 4174,
+    strictPort: true,
+  },
   build: {
     chunkSizeWarningLimit: 600,
     rollupOptions: {

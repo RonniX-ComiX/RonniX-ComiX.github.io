@@ -1,10 +1,21 @@
-
+/**
+ * App.tsx — Root: Router, Domain-Heimatroute, SSO-Weichen, globale Provider.
+ *
+ * Feature: rendert pro Domain die passende Sektion (`/` je Hostname bzw. lokale
+ * `?site=`-Simulation), leitet Kategorie-Pfade live per `ExternalRedirect` mit
+ * SSO-Token (Fragment-Transport) weiter und mountet `SSOAutoLogin` (stiller
+ * Iframe-Check), `LanguageParamSynchronizer` (`?lang=`-Handover) und SSO-Routen
+ * (`/sso`, `/sso-bounce`, `/sso-seed`, `/global-logout`, alle noIndex).
+ * Gehört NICHT hierher: SSO-Details (siehe `utils/sso*.ts`, `components/SSOAutoLogin`).
+ */
 
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, useSearchParams, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
+import { useCrossDomainToken } from './hooks/useCrossDomainToken';
+import { buildSsoUrl } from './utils/ssoValidation';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { HomeLatestSection } from './components/sections/HomeLatestSection';
@@ -32,7 +43,9 @@ const SSOBounce = lazy(() => import('./components/pages/SSOBounce').then(m => ({
 const SSOSeed = lazy(() => import('./components/pages/SSOSeed').then(m => ({ default: m.SSOSeed })));
 const GlobalLogout = lazy(() => import('./components/pages/GlobalLogout').then(m => ({ default: m.GlobalLogout })));
 import { SSOAutoLogin } from './components/SSOAutoLogin';
-import { getCurrentCategory } from './utils/domainConfig';
+import { ViewTransitionHandler } from './components/ViewTransitionHandler';
+import { getCurrentCategory, isLocalhost, getLocalSiteOverride, setLocalSiteOverride } from './utils/domainConfig';
+import type { SiteCategory } from './utils/domainConfig';
 
 const RouteFallback = () => (
   <div className="flex justify-center items-center min-h-[50vh]">
@@ -58,6 +71,58 @@ const MaintenanceBanner = () => {
   return (
     <div className="bg-yellow-600 text-black text-center text-sm font-bold py-2 px-4">
       Wartungsmodus – einige Funktionen sind temporär eingeschränkt.
+    </div>
+  );
+};
+
+// DEV-only Site-Switcher fürs lokale Test-Hosting (localhost:4174).
+// Wird im Production-Build nie gerendert. Setzt die ?site=-Simulation
+// (persistiert in localStorage), damit alle 6 Domain-Ansichten lokal testbar sind.
+const LOCAL_SITES: { id: SiteCategory; label: string }[] = [
+  { id: 'main', label: 'Main' },
+  { id: 'comics', label: 'Comix' },
+  { id: 'boox', label: 'Boox' },
+  { id: 'gamez', label: 'Gamez' },
+  { id: 'moviez', label: 'Moviez' },
+  { id: 'seriez', label: 'Seriez' },
+];
+
+const SiteSwitcher = () => {
+  const navigate = useNavigate();
+  const { search } = useLocation();
+  if (!import.meta.env.DEV) return null;
+  if (!isLocalhost()) return null;
+
+  const active = getLocalSiteOverride() ?? 'main';
+
+  const pick = (site: SiteCategory) => {
+    setLocalSiteOverride(site === 'main' ? null : site);
+    // ?site= in der URL halten (bookmarkbar); localStorage trägt die Simulation
+    // bei Folgnavigationen ohne Param weiter.
+    const params = new URLSearchParams(search);
+    if (site === 'main') params.delete('site');
+    else params.set('site', site);
+    const qs = params.toString();
+    navigate({ pathname: '/', search: qs ? `?${qs}` : '' });
+  };
+
+  return (
+    <div className="bg-neutral-900 border-b border-neutral-800 px-4 py-1.5 flex items-center justify-center gap-1.5 flex-wrap" title="Nur DEV: simuliert die 6 Live-Domains auf localhost">
+      <span className="text-[10px] font-mono uppercase tracking-widest text-gray-500 mr-1">Local-Site:</span>
+      {LOCAL_SITES.map((s) => (
+        <button
+          key={s.id}
+          type="button"
+          onClick={() => pick(s.id)}
+          className={`text-[11px] font-mono px-2 py-0.5 rounded border transition-colors ${
+            active === s.id
+              ? 'bg-red-700 border-red-500 text-white'
+              : 'bg-black border-neutral-700 text-gray-400 hover:text-white hover:border-gray-500'
+          }`}
+        >
+          {s.label}
+        </button>
+      ))}
     </div>
   );
 };
@@ -101,10 +166,12 @@ const LanguageParamSynchronizer = () => {
 };
 
 // Component to handle client-side redirects to external domains with SSO support
+// (Token im Fragment statt Query, Timeout+Cache via useCrossDomainToken)
 const ExternalRedirect = ({ to }: { to: string }) => {
-  const { currentUser, getCrossDomainToken, loading } = useAuth();
+  const { currentUser, loading } = useAuth();
+  const { getToken } = useCrossDomainToken();
   const { language } = useLanguage(); // Get current language to pass it along
-  
+
   React.useEffect(() => {
     // If auth is still loading, wait.
     if (loading) return;
@@ -126,23 +193,22 @@ const ExternalRedirect = ({ to }: { to: string }) => {
         // LOGGED IN:
         // Try to get an SSO token before redirecting
         try {
-            const token = await getCrossDomainToken();
+            const token = await getToken();
             if (token) {
-                // Construct URL for SSO Landing: https://target.com/sso?token=...&returnUrl=/path?lang=de
-                const ssoTarget = `${targetUrlObj.origin}/sso?token=${token}&returnUrl=${encodeURIComponent(targetUrlObj.pathname + targetUrlObj.search)}`;
-                window.location.replace(ssoTarget);
+                // SSO-Landing mit Fragment-Transport (Token nie in Server-Logs)
+                window.location.replace(buildSsoUrl(targetUrlObj.origin, token, targetUrlObj.pathname + targetUrlObj.search));
                 return;
             }
         } catch (e) {
-            console.error("SSO Redirect failed, falling back to direct link", e);
+            console.error('[sso] Redirect-Token fehlgeschlagen, direkter Link als Fallback', e);
         }
-        
+
         // Fallback for failed token gen
         window.location.replace(finalTo);
     };
-    
+
     performRedirect();
-  }, [to, currentUser, getCrossDomainToken, loading, language]);
+  }, [to, currentUser, getToken, loading, language]);
 
   // VISUAL OPTIMIZATION:
   // If loading or no user, render NOTHING. This prevents the "Warping/Redirecting" flicker for guests.
@@ -168,9 +234,12 @@ const App: React.FC = () => {
   const currentCategory = getCurrentCategory();
   const helmetContext = {};
 
-  // Determine what to render on the "/" route based on the domain
-  const renderHomeRoute = () => {
-    switch (currentCategory) {
+  // Rendert die Kategorie-Startseite für eine gegebene Kategorie.
+  // Auf Live-Domains kommt die Kategorie vom Hostname, auf localhost zusätzlich
+  // von der ?site=-Simulation — und die /comix|/boox|...-Routen nutzen dieselbe
+  // Funktion, damit lokale Tests nie auf Production springen.
+  const renderCategorySection = (category: SiteCategory) => {
+    switch (category) {
       case 'comics':
         return (
           <div className="container mx-auto px-6 py-12 animate-fade-in">
@@ -230,9 +299,9 @@ const App: React.FC = () => {
       default:
         return (
           <>
-            <SEO 
-              title="Home" 
-              description="RonniX Entertainment - Dein Hub für Comics, Bücher, Games und Filme." 
+            <SEO
+              title="Home"
+              description="RonniX Entertainment - Dein Hub für Comics, Bücher, Games und Filme."
             />
             <StructuredData type="WebSite" data={{}} />
             <Hero />
@@ -242,17 +311,29 @@ const App: React.FC = () => {
     }
   };
 
+  // Determine what to render on the "/" route based on the domain (or localhost simulation)
+  const renderHomeRoute = () => renderCategorySection(currentCategory);
+
+  // Localhost: Kategorie-Pfade rendern die Section direkt (Pfad-Simulation),
+  // damit Tests nie auf Production springen. Live bleibt ExternalRedirect.
+  const isLocal = isLocalhost();
+  const categoryRoute = (category: SiteCategory, liveUrl: string) => (
+    isLocal ? renderCategorySection(category) : <ExternalRedirect to={liveUrl} />
+  );
+
   return (
     <HelmetProvider context={helmetContext}>
       <AuthProvider>
         <LanguageProvider>
           <Router>
             <ScrollToTop />
+            <ViewTransitionHandler />
             <LanguageParamSynchronizer />
             <SSOAutoLogin />
             <MaintenanceBanner />
 
             <div className="flex flex-col min-h-screen bg-neutral-950 font-sans text-white overflow-x-hidden w-full relative">
+              <SiteSwitcher />
               <Navbar />
 
               <main className="flex-grow">
@@ -260,11 +341,11 @@ const App: React.FC = () => {
                 <Routes>
                   <Route path="/" element={renderHomeRoute()} />
 
-                  {/* SSO Handlers (noIndex, kein Duplicate) */}
-                  <Route path="/sso" element={<><SEO title="SSO" noIndex /><SSOCallback /></>} />
-                  <Route path="/sso-bounce" element={<><SEO title="SSO" noIndex /><SSOBounce /></>} />
-                  <Route path="/sso-seed" element={<><SEO title="SSO" noIndex /><SSOSeed /></>} />
-                  <Route path="/global-logout" element={<><SEO title="Logout" noIndex /><GlobalLogout /></>} />
+                  {/* SSO Handlers (noIndex, kein Duplicate, markenreiner Tab-Titel ohne "SSO") */}
+                  <Route path="/sso" element={<><SEO title="SSO" noIndex bareTitle /><SSOCallback /></>} />
+                  <Route path="/sso-bounce" element={<><SEO title="SSO" noIndex bareTitle /><SSOBounce /></>} />
+                  <Route path="/sso-seed" element={<><SEO title="SSO" noIndex bareTitle /><SSOSeed /></>} />
+                  <Route path="/global-logout" element={<><SEO title="Logout" noIndex bareTitle /><GlobalLogout /></>} />
 
                   <Route path="/news" element={
                     <div className="container mx-auto px-6 py-12 animate-fade-in">
@@ -273,11 +354,11 @@ const App: React.FC = () => {
                     </div>
                   } />
 
-                  <Route path="/comix" element={<ExternalRedirect to="https://ronnixcomix.de" />} />
-                  <Route path="/boox" element={<ExternalRedirect to="https://ronnixboox.de" />} />
-                  <Route path="/gamez" element={<ExternalRedirect to="https://lamazgamez.de" />} />
-                  <Route path="/moviez" element={<ExternalRedirect to="https://ronnixmoviez.de" />} />
-                  <Route path="/seriez" element={<ExternalRedirect to="https://ronnixseriez.de" />} />
+                  <Route path="/comix" element={categoryRoute('comics', 'https://ronnixcomix.de')} />
+                  <Route path="/boox" element={categoryRoute('boox', 'https://ronnixboox.de')} />
+                  <Route path="/gamez" element={categoryRoute('gamez', 'https://lamazgamez.de')} />
+                  <Route path="/moviez" element={categoryRoute('moviez', 'https://ronnixmoviez.de')} />
+                  <Route path="/seriez" element={categoryRoute('seriez', 'https://ronnixseriez.de')} />
 
                   <Route path="/contact" element={
                     <div className="container mx-auto px-6 py-12 animate-fade-in">
