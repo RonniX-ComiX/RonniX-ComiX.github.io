@@ -1,3 +1,11 @@
+/**
+ * sections/ComicsSection.tsx — ComiX-Kategorieansicht (Comic-Karten + ItemList).
+ *
+ * Feature: lädt Comics-Posts (`useCachedPosts('comics')`), rendert Karten im
+ * Comic-Stil (weißer Bezel, Tilt, Badges; lokalisiert, Scheduled-Overlay für
+ * Admins) und `PostItemListSchema` für Crawler. Benutzung: ComiX-Domain `/`
+ * + lokal `/comix` (`App.tsx`). Gehört NICHT hierher: andere Kategorien.
+ */
 
 import React from 'react';
 import { Link } from 'react-router-dom';
@@ -5,11 +13,15 @@ import { Timestamp } from 'firebase/firestore';
 import { SectionTitle } from '../SectionTitle';
 import { useLanguage } from '../../context/LanguageContext';
 import { useCachedPosts } from '../../hooks/useCachedPosts';
+import { localizePath } from '../../utils/domainConfig';
+import { PostItemListSchema } from '../PostItemListSchema';
+import { ScrollReveal } from '../ScrollReveal';
 
 export const ComicsSection: React.FC = () => {
   const { t, language } = useLanguage();
   const { posts, loading } = useCachedPosts('comics');
 
+  /** Firestore-Timestamp → `TT.MM.JJ` (aktuelle Sprache), `''` bei Falsy. */
   const formatDate = (timestamp: any) => {
       if (!timestamp?.seconds) return '';
       const date = new Date(timestamp.seconds * 1000);
@@ -20,21 +32,23 @@ export const ComicsSection: React.FC = () => {
 
   return (
     <section className="min-h-[50vh]">
-      <SectionTitle title={t.home.comics.title} />
+      <SectionTitle title={t.home.comics.title} eyebrow="PANEL SECTOR" />
+      <PostItemListSchema posts={posts} name={t.home.comics.title} />
       
       {loading ? (
         <div className="flex justify-center p-12">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
         </div>
       ) : posts.length > 0 ? (
+        <ScrollReveal>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 px-4">
           {posts.map((post) => {
             const isScheduled = post.publishedAt?.seconds > Timestamp.now().seconds;
             const displayTitle = (language === 'en' && post.titleEn) ? post.titleEn : post.title;
 
             return (
-                <Link to={`/post/${post.id}`} key={post.id} className={`group relative cursor-pointer block ${isScheduled ? 'opacity-75' : ''}`}>
-                <div className="relative bg-white p-2 transform rotate-[-1deg] transition-all duration-300 group-hover:rotate-0 group-hover:scale-105 group-hover:shadow-[5px_5px_0_rgba(220,38,38,1)]">
+                <Link to={localizePath(`/post/${post.id}`, language)} key={post.id} className={`group relative cursor-pointer block ${isScheduled ? 'opacity-75' : ''}`}>
+                <div className="relative bg-white p-2 transform rotate-[-1deg] transition duration-300 group-hover:rotate-0 group-hover:scale-105 group-hover:shadow-[5px_5px_0_rgba(220,38,38,1)]">
                     
                     {/* Date & Author Badge - Comic Style */}
                     <div className="absolute top-3 left-3 z-20 flex flex-col items-start gap-1 font-sans pointer-events-none">
@@ -47,10 +61,12 @@ export const ComicsSection: React.FC = () => {
                     </div>
 
                     <div className="aspect-[2/3] overflow-hidden bg-gray-900 relative border border-black">
-                        <img 
-                            src={post.coverUrl} 
-                            alt={displayTitle} 
-                            className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                        <img
+                            src={post.coverUrl}
+                            alt={displayTitle}
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition duration-500"
                         />
                         {isScheduled && (
                             <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
@@ -75,6 +91,7 @@ export const ComicsSection: React.FC = () => {
             );
           })}
         </div>
+        </ScrollReveal>
       ) : (
         <div className="flex flex-col items-center justify-center text-center p-12 border border-neutral-800 rounded-xl bg-neutral-900/30">
           <div className="text-6xl mb-6">🎨</div>

@@ -1,17 +1,29 @@
+/**
+ * sections/MoviesSection.tsx — MovieZ-Kategorieansicht (Film-Karten + ItemList).
+ *
+ * Feature: lädt Movies-Posts (`useCachedPosts('movies')`), rendert Karten mit
+ * Cover/Datum/Autor (lokalisiert, Scheduled-Badge für Admins) und
+ * `PostItemListSchema` für Crawler. Benutzung: MovieZ-Domain `/` + lokal
+ * `/moviez` (`App.tsx`). Gehört NICHT hierher: andere Kategorien, Post-Detail.
+ */
 
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { Timestamp } from 'firebase/firestore';
 import { SectionTitle } from '../SectionTitle';
 import { useLanguage } from '../../context/LanguageContext';
-import { Film, Calendar, User, Clapperboard } from 'lucide-react';
+import { Icon } from '../icons/Icon';
 import { useCachedPosts } from '../../hooks/useCachedPosts';
+import { localizePath } from '../../utils/domainConfig';
+import { PostItemListSchema } from '../PostItemListSchema';
+import { ScrollReveal } from '../ScrollReveal';
+import { SectorCard } from '../SectorCard';
 
 export const MoviesSection: React.FC = () => {
   const { t, language } = useLanguage();
   const { posts, loading } = useCachedPosts('movies');
 
   // Helper to format date
+  /** Firestore-Timestamp → `TT.MM.JJ` (aktuelle Sprache), `''` bei Falsy. */
   const formatDate = (timestamp: any) => {
       if (!timestamp?.seconds) return '';
       const date = new Date(timestamp.seconds * 1000);
@@ -22,28 +34,33 @@ export const MoviesSection: React.FC = () => {
 
   return (
     <section className="min-h-[50vh]">
-      <SectionTitle title={t.home.movies.title} />
+      <SectionTitle title={t.home.movies.title} eyebrow="CINEMA SECTOR" />
+      <PostItemListSchema posts={posts} name={t.home.movies.title} />
       
       {loading ? (
         <div className="flex justify-center p-12">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
         </div>
       ) : posts.length > 0 ? (
+        <ScrollReveal>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-4">
-          {posts.map((post) => {
+          {posts.map((post, i) => {
             const isScheduled = post.publishedAt?.seconds > Timestamp.now().seconds;
-            
+
             // Language Logic
             const displayTitle = (language === 'en' && post.titleEn) ? post.titleEn : post.title;
 
             return (
-                <Link to={`/post/${post.id}`} key={post.id} className={`group relative cursor-pointer block rounded-xl overflow-hidden shadow-lg hover:shadow-[0_0_25px_rgba(220,38,38,0.4)] transition-all duration-500 ${isScheduled ? 'opacity-75' : ''}`}>
-                    
+                <SectorCard to={localizePath(`/post/${post.id}`, language)} key={post.id} accent="yellow" tilt={i % 2 === 0 ? -1 : 1} dimmed={isScheduled}>
+                <div className="rounded-lg overflow-hidden bg-black">
+
                     {/* Poster Image Container - REMOVED SCALE EFFECT HERE */}
                     <div className="aspect-[2/3] w-full relative overflow-hidden bg-black">
-                        <img 
-                            src={post.coverUrl} 
-                            alt={displayTitle} 
+                        <img
+                            src={post.coverUrl}
+                            alt={displayTitle}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-cover transition-transform duration-700"
                         />
                         
@@ -53,23 +70,23 @@ export const MoviesSection: React.FC = () => {
                         {/* Top Metadata (Date & Author) - Cinematic Style */}
                         <div className="absolute top-0 left-0 w-full p-3 flex justify-between items-start">
                              <div className="flex flex-col gap-1 items-start">
-                                <span className="flex items-center gap-1.5 bg-black/70 backdrop-blur-md border border-white/10 text-gray-300 text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded">
-                                    <Calendar size={10} className="text-red-500" /> {formatDate(post.publishedAt)}
+                                <span className="flex items-center gap-1.5 bg-black/80 border border-white/10 text-gray-300 text-xs font-bold uppercase tracking-widest px-2 py-1 rounded">
+                                    <Icon name="calendar" size={10} className="text-red-500" /> {formatDate(post.publishedAt)}
                                 </span>
-                                <span className="flex items-center gap-1.5 bg-black/70 backdrop-blur-md border border-white/10 text-gray-300 text-[10px] font-medium px-2 py-1 rounded">
-                                    <User size={10} className="text-red-500" /> {post.authorName || 'RonniX'}
+                                <span className="flex items-center gap-1.5 bg-black/80 border border-white/10 text-gray-300 text-xs font-medium px-2 py-1 rounded">
+                                    <Icon name="user" size={10} className="text-red-500" /> {post.authorName || 'RonniX'}
                                 </span>
                              </div>
 
                              {/* Theme Badge */}
-                             <span className="bg-red-600/90 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded shadow-lg border border-red-500/50">
+                             <span className="bg-red-600 text-white text-xs font-bold uppercase tracking-widest px-2 py-1 rounded shadow-[2px_2px_0_rgba(0,0,0,1)] border-2 border-black">
                                 {t.home.admin.themes[post.theme as keyof typeof t.home.admin.themes] || post.theme || 'Review'}
                              </span>
                         </div>
 
                         {/* Scheduled Badge Overlay */}
                         {isScheduled && (
-                            <div className="absolute inset-0 bg-black/70 flex items-center justify-center backdrop-blur-sm z-20">
+                            <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-20">
                                 <span className="text-yellow-500 font-retro text-2xl border-2 border-yellow-500 px-4 py-2 -rotate-12 shadow-[0_0_15px_rgba(234,179,8,0.5)]">
                                     {t.home.postDetail.scheduledBadge}
                                 </span>
@@ -79,18 +96,20 @@ export const MoviesSection: React.FC = () => {
                         {/* Bottom Title Area */}
                         <div className="absolute bottom-0 left-0 w-full p-4 transform translate-y-1 group-hover:translate-y-0 transition-transform duration-300">
                              <div className="flex items-center gap-2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-2 group-hover:translate-y-0">
-                                 <Clapperboard size={14} className="text-red-500" />
-                                 <span className="text-[10px] uppercase tracking-widest text-red-400 font-bold">{t.home.movies.badge}</span>
+                                 <Icon name="clapperboard" size={14} className="text-red-500" />
+                                 <span className="text-xs uppercase tracking-widest text-red-400 font-bold">{t.home.movies.badge}</span>
                              </div>
                              <h3 className="text-xl md:text-2xl font-retro text-white leading-none drop-shadow-lg group-hover:text-red-500 transition-colors duration-300">
                                 {displayTitle}
                              </h3>
                         </div>
                     </div>
-                </Link>
+                </div>
+                </SectorCard>
             );
           })}
         </div>
+        </ScrollReveal>
       ) : (
         <div className="flex flex-col items-center justify-center text-center p-12 border border-neutral-800 rounded-xl bg-neutral-900/30">
           <div className="text-6xl mb-6">🎬</div>

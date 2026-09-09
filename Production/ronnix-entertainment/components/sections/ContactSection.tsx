@@ -1,15 +1,30 @@
+/**
+ * ContactSection.tsx — Kontaktbereich mit Social-Links und Formular.
+ *
+ * Feature: Social-Icons (extern) + natives Formular via FormSubmit
+ * (Endpunkt aus `utils/appConfig.ts`, Honeypot `_honey`). `_next` zeigt
+ * same-origin auf `/danke` (eigene Danke-Route, kein Fremd-Redirect). Benutzung: `/contact`
+ * (+ `/en/contact`) in `App.tsx`, Formular-Texte aus `locales/home.ts`.
+ * Gehört NICHT hierher: Bestätigungsseite (`components/pages/Danke.tsx`).
+ */
 
 import React from 'react';
-import { Mail, Facebook, Instagram, Send } from 'lucide-react';
+import { Icon } from '../icons/Icon';
 import { SectionTitle } from '../SectionTitle';
 import { useLanguage } from '../../context/LanguageContext';
+import { CONTACT_FORM_ENDPOINT } from '../../utils/appConfig';
+import { ComicButton } from '../ComicButton';
+import { ScrollReveal } from '../ScrollReveal';
 
 export const ContactSection: React.FC = () => {
   const { t } = useLanguage();
 
+  // Same-origin Danke-URL (FormSubmit braucht absolut; läuft auf allen 6 Domains korrekt).
+  const thanksUrl = typeof window !== 'undefined' ? `${window.location.origin}/danke` : '/danke';
+
   return (
-    <section className="mb-16">
-      <SectionTitle title={t.home.contact.title} />
+    <section>
+      <SectionTitle title={t.home.contact.title} eyebrow="OPEN CHANNEL" />
       
       <p className="text-center mt-4 mb-8 text-gray-400 max-w-lg mx-auto">
         {t.home.contact.subtitle}
@@ -22,33 +37,34 @@ export const ContactSection: React.FC = () => {
           target="_blank" 
           rel="noopener noreferrer"
           title="Instagram" 
-          className="text-pink-600 hover:text-pink-500 transform hover:scale-110 hover:rotate-6 transition-all duration-300"
+          className="text-pink-600 hover:text-pink-500 transform hover:scale-110 hover:rotate-6 transition duration-300"
         >
-          <Instagram size={40} />
+          <Icon name="instagram" size={40} />
         </a>
         <a 
           href="mailto:ronnixcomix@gmail.com" 
           title="Mail" 
-          className="text-red-600 hover:text-red-500 transform hover:scale-110 hover:-rotate-6 transition-all duration-300"
+          className="text-red-600 hover:text-red-500 transform hover:scale-110 hover:-rotate-6 transition duration-300"
         >
-          <Mail size={40} />
+          <Icon name="mail" size={40} />
         </a>
         <a 
           href="https://www.facebook.com/p/RonniX-ComiX-100068056538624/" 
           target="_blank" 
           rel="noopener noreferrer"
           title="Facebook" 
-          className="text-blue-600 hover:text-blue-500 transform hover:scale-110 hover:rotate-6 transition-all duration-300"
+          className="text-blue-600 hover:text-blue-500 transform hover:scale-110 hover:rotate-6 transition duration-300"
         >
-          <Facebook size={40} />
+          <Icon name="facebook" size={40} />
         </a>
       </div>
 
       {/* Form */}
+      <ScrollReveal>
       <div className="max-w-xl mx-auto bg-neutral-900 p-8 rounded-2xl shadow-2xl border border-red-900/20">
         <form 
           className="space-y-6" 
-          action="https://formsubmit.co/ronnixcomix@gmail.com" 
+          action={CONTACT_FORM_ENDPOINT}
           method="POST"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -59,7 +75,7 @@ export const ContactSection: React.FC = () => {
                 id="name" 
                 name="name" 
                 required 
-                className="w-full px-4 py-3 rounded-lg bg-black text-white border border-neutral-700 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-colors placeholder-gray-600"
+                className="w-full px-4 py-3 rounded-lg bg-black text-white border border-neutral-700 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-colors placeholder-gray-500"
                 placeholder={t.home.contact.namePlaceholder}
               />
             </div>
@@ -71,7 +87,7 @@ export const ContactSection: React.FC = () => {
                 id="email" 
                 name="email" 
                 required 
-                className="w-full px-4 py-3 rounded-lg bg-black text-white border border-neutral-700 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-colors placeholder-gray-600"
+                className="w-full px-4 py-3 rounded-lg bg-black text-white border border-neutral-700 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-colors placeholder-gray-500"
                 placeholder={t.home.contact.emailPlaceholder}
               />
             </div>
@@ -84,7 +100,7 @@ export const ContactSection: React.FC = () => {
               id="subject" 
               name="subject" 
               required 
-              className="w-full px-4 py-3 rounded-lg bg-black text-white border border-neutral-700 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-colors placeholder-gray-600"
+              className="w-full px-4 py-3 rounded-lg bg-black text-white border border-neutral-700 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-colors placeholder-gray-500"
               placeholder={t.home.contact.subjectPlaceholder}
             />
           </div>
@@ -96,7 +112,7 @@ export const ContactSection: React.FC = () => {
               name="message" 
               rows={4} 
               required 
-              className="w-full px-4 py-3 rounded-lg bg-black text-white border border-neutral-700 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-colors placeholder-gray-600 resize-none"
+              className="w-full px-4 py-3 rounded-lg bg-black text-white border border-neutral-700 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-colors placeholder-gray-500 resize-none"
               placeholder={t.home.contact.messagePlaceholder}
             ></textarea>
           </div>
@@ -106,18 +122,19 @@ export const ContactSection: React.FC = () => {
           <input type="hidden" name="_replyto" value="email" />
           <input type="hidden" name="_subject" value={t.home.contact.formSubject} />
           <input type="hidden" name="_autoresponse" value={t.home.contact.formAutoResponse} />
-          <input type="hidden" name="_next" value="https://ronnix-comix.github.io/" />
+          <input type="hidden" name="_next" value={thanksUrl} />
 
           <div className="text-center pt-2">
-            <button 
-              type="submit" 
-              className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white px-8 py-3 rounded-full font-bold transition-all duration-300 hover:shadow-[0_0_20px_rgba(220,38,38,0.4)] transform hover:-translate-y-1 w-full md:w-auto"
+            <ComicButton
+              type="submit"
+              className="px-8 py-3 text-xl w-full md:w-auto"
             >
-              {t.home.contact.submit} <Send size={18} />
-            </button>
+              {t.home.contact.submit} <Icon name="send" size={18} />
+            </ComicButton>
           </div>
         </form>
       </div>
+      </ScrollReveal>
     </section>
   );
 };

@@ -1,3 +1,12 @@
+/**
+ * hooks/useRemoteConfigFlags.ts — Feature-Flags aus Firebase Remote Config.
+ *
+ * Feature: liefert Cooldowns, Seitengrößen und Maintenance-Mode mit Defaults
+ * (offline-sicher: Defaults bei Fehlern). Benutzung: `useRemoteConfigFlags()`
+ * in `App.tsx` (MaintenanceBanner) und Profil/Kommentar-Flows.
+ * Gehört NICHT hierher: Flag-Definitionen (Firebase-Konsole/Template).
+ */
+
 import { useEffect, useState } from 'react';
 import { getValue } from 'firebase/remote-config';
 import { remoteConfig } from '../firebase';

@@ -101,6 +101,29 @@ html, body {
   to { transform: rotate(360deg); }
 }
 
+/* Tastatur-Fokus global (WCAG 2.4.7): rot, offset, überall sichtbar.
+   Elemente mit eigenem Fokus-Ring (Inputs mit focus:ring) behalten ihn;
+   nackte `focus:outline-none` ohne Ersatz sind verboten. */
+:focus-visible {
+  outline: 2px solid #dc2626;
+  outline-offset: 2px;
+}
+
+/* Reduced Motion global: Standard-UI-Animationen (Fade/Slide/Pulse/Spin) werden
+   statisch — Inhalte erscheinen sofort. Warp/View-Transition haben eigene Guards
+   weiter unten. Hover-Transitions bleiben (kurz, nutzerinitiiert). */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .animate-fade-in,
+  .animate-slide-up,
+  .animate-pulse,
+  .animate-spin {
+    animation: none !important;
+  }
+}
+
 /* WarpScreen: Sector-Jump-Motion (nur transform/opacity, GPU-freundlich) */
 @keyframes warp-ring-rotate {
   to { transform: rotate(360deg); }
@@ -193,7 +216,7 @@ html, body {
 }
 .editor-content:empty:before {
   content: attr(data-placeholder);
-  color: #555;
+  color: #737373;
   pointer-events: none;
   display: block;
 }

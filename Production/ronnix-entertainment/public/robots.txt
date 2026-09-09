@@ -8,5 +8,6 @@ Disallow: /sso-bounce
 Disallow: /sso-seed
 Disallow: /global-logout
 
-# Host-aware Sitemap (Function liefert je Domain gefiltert)
+# Statischer Fallback (Main) — live liefert die host-aware `robots`-Function
+# (firebase.json-Rewrite) je Domain die passende Sitemap-Zeile.
 Sitemap: https://ronnixentertainment.de/sitemap.xml

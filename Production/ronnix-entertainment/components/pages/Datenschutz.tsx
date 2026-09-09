@@ -1,3 +1,11 @@
+/**
+ * pages/Datenschutz.tsx — Datenschutzerklärung (statische Legal-Seite).
+ *
+ * Feature: rendert `t.legal.privacy` zweisprachig im Legal-Kartenlayout.
+ * Benutzung: `/datenschutz` (+ `/en/datenschutz`) in `App.tsx` (indexiert).
+ * Gehört NICHT hierher: AGB, Impressum, Cookie-Logik (kein Tracking aktiv).
+ */
+
 import React from 'react';
 import { SectionTitle } from '../SectionTitle';
 import { useLanguage } from '../../context/LanguageContext';

@@ -15,6 +15,7 @@ import { auth } from '../../firebase';
 import { WarpScreen } from '../../components/WarpScreen';
 import { extractSsoParams, sanitizeCallbackUrl, stripSsoParamsFromUrl } from '../../utils/ssoValidation';
 import { getSsoMainOrigin } from '../../utils/ssoConfig';
+import { logError } from '../../utils/logger';
 
 export const SSOSeed: React.FC = () => {
     const [status, setStatus] = useState('Synchronisiere Hauptquartier...');
@@ -52,7 +53,7 @@ export const SSOSeed: React.FC = () => {
                 // Immediately return (replace: kein Seed in der History)
                 window.location.replace(returnUrl);
             } catch (err) {
-                console.error("[sso] Seed-Login fehlgeschlagen", err);
+                logError('sso-seed', "[sso] Seed-Login fehlgeschlagen", err);
                 setStatus('Synchronisation fehlgeschlagen. Fahre lokal fort...');
                 setError(true);
                 // Fallback: Return anyway after short delay

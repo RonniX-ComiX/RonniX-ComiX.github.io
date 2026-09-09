@@ -30,6 +30,11 @@ export default {
         'fade-in': 'fadeIn 1s ease-out',
         'slide-up': 'slideUp 0.8s ease-out',
       },
+      // Spiel-Kurve (Single Source, vgl. View-Transition in index.css):
+      // `ease-game` für Motion, die Masse haben soll — statt ease-out/linear.
+      transitionTimingFunction: {
+        'game': 'cubic-bezier(0.32, 0.72, 0, 1)',
+      },
       keyframes: {
         fadeIn: {
           '0%': { opacity: '0' },

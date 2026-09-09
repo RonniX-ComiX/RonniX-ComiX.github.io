@@ -22,10 +22,8 @@ import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { getCurrentCategory, isLocalhost } from '../utils/domainConfig';
 import { SSO_CONFIG, getSsoMainOrigin } from '../utils/ssoConfig';
-
-// Hardcoded Admin UID matches firestore.rules
-// Optimizes backend usage by avoiding a DB read for every page load
-const ADMIN_UID = 'nRMiuZsj4GZQ0siYXFOqXVCc7mB2';
+import { ADMIN_UID } from '../utils/appConfig'; // Hartcodiert statt DB-Read: spart einen Read pro Page-Load
+import { logError, logInfo, logWarn } from '../utils/logger';
 
 /** Kurz-Cache für Cross-Domain-Token (ein Token pro Tab, bis ~30 Min, siehe SSO_CONFIG). */
 let cachedToken: { token: string; expiresAt: number } | null = null;
@@ -91,7 +89,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     getRedirectResult(auth)
       .then(async (result) => {
         if (cancelled || !result?.user) return;
-        console.info('[sso] Google-Redirect-Login abgeschlossen');
+        logInfo('auth-context', '[sso] Google-Redirect-Login abgeschlossen');
         const user = result.user;
         try {
           await setDoc(
@@ -107,7 +105,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             ).catch(() => {});
           }
         } catch (e) {
-          console.error('[auth] Redirect-User-Sync fehlgeschlagen', e);
+          logError('auth-context', '[auth] Redirect-User-Sync fehlgeschlagen', e);
         }
         setLoginHint();
       })
@@ -145,7 +143,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 const lastLogoutTime = data.lastLogoutAt.toDate().getTime();
                 const currentSessionTime = new Date(currentUser.metadata.lastSignInTime || 0).getTime();
                 if (lastLogoutTime > currentSessionTime + 2000) {
-                    console.log("Global logout detected. Signing out local session...");
+                    logInfo("auth-context", "Global logout detected. Signing out local session...");
                     clearSsoTokenCache();
                     clearLoginHint();
                     try {
@@ -194,7 +192,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
            const globalSignOutFn = httpsCallable(functions, 'globalSignOut');
            await globalSignOutFn();
        } catch (e) {
-           console.error("Global SignOut Backend Error", e);
+           logError("auth-context", "Global SignOut Backend Error", e);
        }
     }
   };
@@ -206,13 +204,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    */
   const getCrossDomainToken = useCallback(async (): Promise<string | null> => {
     const startedAt = typeof performance !== 'undefined' ? performance.now() : 0;
-    console.info('[sso] getCrossDomainToken aufgerufen', { hasUser: !!currentUser });
+    logInfo('auth-context', '[sso] getCrossDomainToken aufgerufen', { hasUser: !!currentUser });
     if (!currentUser) {
-        console.warn('[sso] kein User, kein Token');
+        logWarn('auth-context', '[sso] kein User, kein Token');
         return null;
     }
     if (cachedToken && cachedToken.expiresAt > Date.now()) {
-      console.info('[sso] Token aus Cache');
+      logInfo('auth-context', '[sso] Token aus Cache');
       return cachedToken.token;
     }
     try {
@@ -224,7 +222,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const token = result?.data?.token ?? null;
         if (token) {
           cachedToken = { token, expiresAt: Date.now() + SSO_CONFIG.tokenCacheMs };
-          console.info('[sso] Token erhalten', {
+          logInfo('auth-context', '[sso] Token erhalten', {
             length: token.length,
             type: 'customToken',
             durationMs: startedAt ? Math.round(performance.now() - startedAt) : -1,
@@ -232,7 +230,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
         return token;
     } catch (error: any) {
-        console.error('[sso] Token-Erzeugung fehlgeschlagen', {
+        logError('auth-context', '[sso] Token-Erzeugung fehlgeschlagen', {
           error,
           durationMs: startedAt ? Math.round(performance.now() - startedAt) : -1,
         });

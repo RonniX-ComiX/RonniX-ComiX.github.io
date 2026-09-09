@@ -18,7 +18,8 @@ export const navigation = {
       greeting: 'Hi,',
       menu: 'Menü',
       language: 'Sprache',
-      switchLanguage: 'Zu Englisch wechseln'
+      switchLanguage: 'Zu Englisch wechseln',
+      skipToContent: 'Zum Inhalt springen'
     },
     footer: {
       impressum: 'Impressum',
@@ -45,7 +46,8 @@ export const navigation = {
       greeting: 'Hi,',
       menu: 'Menu',
       language: 'Language',
-      switchLanguage: 'Switch to German'
+      switchLanguage: 'Switch to German',
+      skipToContent: 'Skip to content'
     },
     footer: {
       impressum: 'Imprint',

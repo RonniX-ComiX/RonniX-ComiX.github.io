@@ -1,14 +1,24 @@
+/**
+ * pages/UserProfile.tsx — Profilverwaltung (Name, Avatar, Passwort).
+ *
+ * Feature: lädt/speichert Profil via `updateProfileWithCooldown` (Remote-Config-
+ * Cooldown), Avatar-Upload über externen Hoster-Flow, E-Mail/Passwort-Änderung
+ * mit Re-Auth-Hinweisen. Nur für eingeloggte User (Guard in `App.tsx`,
+ * Route `noIndex`). Benutzung: `/profile` (+ `/en/profile`).
+ * Gehört NICHT hierher: Login-Dialog (`AuthModal.tsx`), SSO (`sso*.ts`).
+ */
 
 import React, { useState, useEffect } from 'react';
 import { updateEmail, updatePassword } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
 import { doc, getDoc } from 'firebase/firestore';
-import { User, Save, CheckCircle, PlusCircle, Link as LinkIcon, Lock, Shield, AlertCircle, Clock, Eye, EyeOff } from 'lucide-react';
+import { Icon } from '../icons/Icon';
 import { useAuth } from '../../context/AuthContext';
 import { SectionTitle } from '../SectionTitle';
 import { useLanguage } from '../../context/LanguageContext';
 import { auth, db, functions } from '../../firebase';
 import { Link } from 'react-router-dom';
+import { logError } from '../../utils/logger';
 
 export const UserProfile: React.FC = () => {
   const { currentUser, isAdmin } = useAuth();
@@ -61,7 +71,7 @@ export const UserProfile: React.FC = () => {
                   if (data.photoURL) setPhotoURL(data.photoURL);
               }
           } catch (e) {
-              console.error("Error fetching user data", e);
+              logError("user-profile", "Error fetching user data", e);
           }
       };
       fetchUserData();
@@ -116,7 +126,7 @@ export const UserProfile: React.FC = () => {
       setSuccessProfile(true);
       setTimeout(() => setSuccessProfile(false), 3000);
     } catch (error: any) {
-      console.error("Error updating profile", error);
+      logError("user-profile", "Error updating profile", error);
       if (error?.code === 'functions/failed-precondition') {
         alert('Cooldown aktiv (24h) – bitte später erneut versuchen.');
       }
@@ -161,7 +171,7 @@ export const UserProfile: React.FC = () => {
         }
 
     } catch (error: any) {
-        console.error("Error updating security settings", error);
+        logError("user-profile", "Error updating security settings", error);
         if (error.code === 'auth/requires-recent-login') {
             setSecurityError(t.authModal.profile.reauthError);
         } else if (error.code === 'auth/email-already-in-use') {
@@ -193,10 +203,10 @@ export const UserProfile: React.FC = () => {
             <div className="mb-8 animate-fade-in bg-neutral-900/50 p-6 rounded-2xl border border-red-900/30">
                 <Link 
                     to="/create"
-                    className="w-full flex items-center justify-center gap-3 bg-neutral-800 border-2 border-dashed border-red-900/50 hover:border-red-600 hover:bg-neutral-800/80 text-white p-4 rounded-xl transition-all group"
+                    className="w-full flex items-center justify-center gap-3 bg-neutral-800 border-2 border-dashed border-red-900/50 hover:border-red-600 hover:bg-neutral-800/80 text-white p-4 rounded-xl transition group"
                 >
                     <div className="bg-red-600 p-2 rounded-full group-hover:scale-110 transition-transform">
-                        <PlusCircle size={24} />
+                        <Icon name="plus-circle" size={24} />
                     </div>
                     <div className="text-left">
                         <h3 className="font-retro text-xl tracking-wide">{t.home.admin.createTitle}</h3>
@@ -214,13 +224,13 @@ export const UserProfile: React.FC = () => {
                 {/* Warning Banner */}
                 <div className="bg-yellow-900/30 border-l-4 border-yellow-600 p-4 mb-6">
                     <div className="flex gap-3">
-                        <AlertCircle className="text-yellow-500 flex-shrink-0" size={20} />
+                        <Icon name="alert-circle" className="text-yellow-500 flex-shrink-0" size={20} />
                         <p className="text-sm text-yellow-200">{t.authModal.profile.cooldownWarning}</p>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-2 mb-6 text-red-500 border-b border-red-900/30 pb-2">
-                    <User size={24} />
+                    <Icon name="user" size={24} />
                     <h3 className="font-retro text-xl tracking-wide text-white">{t.authModal.profile.generalTitle}</h3>
                 </div>
 
@@ -229,9 +239,9 @@ export const UserProfile: React.FC = () => {
                     <div className="relative group">
                         <div className={`w-32 h-32 rounded-full bg-neutral-800 border-4 flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(220,38,38,0.5)] ${!canUpdateAvatar ? 'border-gray-600 grayscale' : 'border-red-600'}`}>
                             {photoURL ? (
-                                <img src={photoURL} alt="Profile" className="w-full h-full object-cover" />
+                                <img src={photoURL} alt="Profile" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                             ) : (
-                                <User size={64} className="text-gray-500" />
+                                <Icon name="user" size={64} className="text-gray-500" />
                             )}
                         </div>
                     </div>
@@ -244,12 +254,12 @@ export const UserProfile: React.FC = () => {
                             <label className="text-sm font-bold text-red-500 uppercase">{t.authModal.profile.currentName}</label>
                             {!canUpdateName && (
                                 <span className="flex items-center gap-1 text-xs text-yellow-500 font-mono bg-black px-2 py-0.5 rounded border border-yellow-900">
-                                    <Clock size={12} /> {formatDuration(nameCooldown)}
+                                    <Icon name="clock" size={12} /> {formatDuration(nameCooldown)}
                                 </span>
                             )}
                         </div>
                         <div className="relative">
-                            <User className={`absolute left-3 top-3 ${!canUpdateName ? 'text-gray-600' : 'text-gray-500'}`} size={18} />
+                            <Icon name="user" className={`absolute left-3 top-3 ${!canUpdateName ? 'text-gray-600' : 'text-gray-500'}`} size={18} />
                             <input 
                             type="text" 
                             required
@@ -262,7 +272,7 @@ export const UserProfile: React.FC = () => {
                                 : 'border-neutral-700 focus:border-red-600 focus:ring-1 focus:ring-red-600'
                             }`}
                             />
-                            {!canUpdateName && <Lock className="absolute right-3 top-3 text-gray-600" size={18} />}
+                            {!canUpdateName && <Icon name="lock" className="absolute right-3 top-3 text-gray-600" size={18} />}
                         </div>
                     </div>
 
@@ -272,12 +282,12 @@ export const UserProfile: React.FC = () => {
                             <label className="text-sm font-bold text-red-500 uppercase">{t.authModal.profile.avatarLabel}</label>
                             {!canUpdateAvatar && (
                                 <span className="flex items-center gap-1 text-xs text-yellow-500 font-mono bg-black px-2 py-0.5 rounded border border-yellow-900">
-                                    <Clock size={12} /> {formatDuration(avatarCooldown)}
+                                    <Icon name="clock" size={12} /> {formatDuration(avatarCooldown)}
                                 </span>
                             )}
                         </div>
                         <div className="relative">
-                            <LinkIcon className={`absolute left-3 top-3 ${!canUpdateAvatar ? 'text-gray-600' : 'text-gray-500'}`} size={18} />
+                            <Icon name="link" className={`absolute left-3 top-3 ${!canUpdateAvatar ? 'text-gray-600' : 'text-gray-500'}`} size={18} />
                             <input 
                             type="text" 
                             disabled={!canUpdateAvatar}
@@ -290,7 +300,7 @@ export const UserProfile: React.FC = () => {
                                 : 'border-neutral-700 focus:border-red-600 focus:ring-1 focus:ring-red-600'
                             }`}
                             />
-                            {!canUpdateAvatar && <Lock className="absolute right-3 top-3 text-gray-600" size={18} />}
+                            {!canUpdateAvatar && <Icon name="lock" className="absolute right-3 top-3 text-gray-600" size={18} />}
                         </div>
                         <p className="text-xs text-gray-500 mt-2">
                             {t.authModal.profile.avatarHint} <a href="https://imgbb.com" target="_blank" rel="noreferrer" className="text-red-400 hover:underline">imgbb.com</a>
@@ -299,7 +309,7 @@ export const UserProfile: React.FC = () => {
 
                     {successProfile && (
                         <div className="bg-green-900/20 border border-green-600/50 text-green-400 p-3 rounded-lg flex items-center justify-center gap-2 text-sm animate-pulse">
-                            <CheckCircle size={16} />
+                            <Icon name="check-circle" size={16} />
                             {t.authModal.profile.updateSuccess}
                         </div>
                     )}
@@ -307,11 +317,11 @@ export const UserProfile: React.FC = () => {
                     <button 
                     type="submit" 
                     disabled={loadingProfile || (!canUpdateName && !canUpdateAvatar)}
-                    className="w-full flex items-center justify-center gap-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 text-white px-8 py-3 rounded-lg font-bold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full flex items-center justify-center gap-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 text-white px-8 py-3 rounded-lg font-bold transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                     {loadingProfile ? '...' : (
                         <>
-                            <Save size={18} /> {t.authModal.profile.updateBtn}
+                            <Icon name="save" size={18} /> {t.authModal.profile.updateBtn}
                         </>
                     )}
                     </button>
@@ -321,7 +331,7 @@ export const UserProfile: React.FC = () => {
             {/* COLUMN 2: SECURITY */}
             <div className="bg-neutral-900/50 p-8 rounded-2xl border border-red-900/20 shadow-2xl animate-fade-in h-fit" style={{ animationDelay: '0.1s' }}>
                 <div className="flex items-center gap-2 mb-6 text-red-500 border-b border-red-900/30 pb-2">
-                    <Shield size={24} />
+                    <Icon name="shield" size={24} />
                     <h3 className="font-retro text-xl tracking-wide text-white">{t.authModal.profile.securityTitle}</h3>
                 </div>
 
@@ -329,7 +339,7 @@ export const UserProfile: React.FC = () => {
                     <div>
                         <label className="block mb-2 text-sm font-bold text-red-500 uppercase">{t.authModal.profile.emailLabel}</label>
                         <div className="relative">
-                            <User className="absolute left-3 top-3 text-gray-500" size={18} />
+                            <Icon name="user" className="absolute left-3 top-3 text-gray-500" size={18} />
                             <input 
                                 type="email" 
                                 required
@@ -348,11 +358,11 @@ export const UserProfile: React.FC = () => {
                                 onClick={() => setShowPassword(!showPassword)}
                                 className="text-gray-500 hover:text-white transition-colors"
                             >
-                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                {showPassword ? <Icon name="eye-off" size={16} /> : <Icon name="eye" size={16} />}
                             </button>
                         </div>
                         <div className="relative">
-                            <Lock className="absolute left-3 top-3 text-gray-500" size={18} />
+                            <Icon name="lock" className="absolute left-3 top-3 text-gray-500" size={18} />
                             <input 
                                 type={showPassword ? "text" : "password"} 
                                 value={newPassword}
@@ -366,7 +376,7 @@ export const UserProfile: React.FC = () => {
                     <div>
                         <label className="block mb-2 text-sm font-bold text-red-500 uppercase">{t.authModal.profile.confirmPasswordLabel}</label>
                         <div className="relative">
-                            <Lock className="absolute left-3 top-3 text-gray-500" size={18} />
+                            <Icon name="lock" className="absolute left-3 top-3 text-gray-500" size={18} />
                             <input 
                                 type={showPassword ? "text" : "password"} 
                                 value={confirmPassword}
@@ -379,14 +389,14 @@ export const UserProfile: React.FC = () => {
 
                     {securityError && (
                         <div className="bg-red-900/20 border border-red-600/50 text-red-200 p-3 rounded-lg flex items-center gap-2 text-sm">
-                            <AlertCircle size={16} />
+                            <Icon name="alert-circle" size={16} />
                             {securityError}
                         </div>
                     )}
 
                     {successSecurity && (
                         <div className="bg-green-900/20 border border-green-600/50 text-green-400 p-3 rounded-lg flex items-center justify-center gap-2 text-sm animate-pulse">
-                            <CheckCircle size={16} />
+                            <Icon name="check-circle" size={16} />
                             {t.authModal.profile.securitySuccess}
                         </div>
                     )}
@@ -394,11 +404,11 @@ export const UserProfile: React.FC = () => {
                     <button 
                         type="submit" 
                         disabled={loadingSecurity}
-                        className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white px-8 py-3 rounded-lg font-bold transition-all duration-300 disabled:opacity-50 hover:shadow-[0_0_15px_rgba(220,38,38,0.4)]"
+                        className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white px-8 py-3 rounded-lg font-bold transition duration-300 disabled:opacity-50 hover:shadow-[0_0_15px_rgba(220,38,38,0.4)]"
                     >
                     {loadingSecurity ? '...' : (
                         <>
-                            <Shield size={18} /> {t.authModal.profile.securityBtn}
+                            <Icon name="shield" size={18} /> {t.authModal.profile.securityBtn}
                         </>
                     )}
                     </button>

@@ -1,5 +1,13 @@
+/**
+ * pages/Impressum.tsx — Anbieterkennzeichnung (statische Legal-Seite).
+ *
+ * Feature: rendert `t.legal.impressum` zweisprachig inkl. Social-Kontakten.
+ * Benutzung: `/impressum` (+ `/en/impressum`) in `App.tsx` (indexiert).
+ * Gehört NICHT hierher: Datenschutz, AGB.
+ */
+
 import React from 'react';
-import { Facebook, Instagram, Mail } from 'lucide-react';
+import { Icon } from '../icons/Icon';
 import { SectionTitle } from '../SectionTitle';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -27,7 +35,7 @@ export const Impressum: React.FC = () => {
           <div>
             <h3 className="text-xl font-retro text-red-500 mb-4 tracking-wide">{t.legal.impressum.contact}</h3>
             <div className="flex flex-col md:flex-row items-center md:items-start gap-2">
-              <Mail className="text-red-600" size={20} />
+              <Icon name="mail" className="text-red-600" size={20} />
               <a href="mailto:ronnixcomix@gmail.com" className="hover:text-red-500 transition-colors">
                 ronnixcomix@gmail.com
               </a>
@@ -43,18 +51,18 @@ export const Impressum: React.FC = () => {
                 target="_blank" 
                 rel="noopener noreferrer"
                 title="Instagram" 
-                className="text-pink-600 hover:text-pink-500 transform hover:scale-110 hover:rotate-6 transition-all duration-300"
+                className="text-pink-600 hover:text-pink-500 transform hover:scale-110 hover:rotate-6 transition duration-300"
               >
-                <Instagram size={40} />
+                <Icon name="instagram" size={40} />
               </a>
               <a 
                 href="https://www.facebook.com/p/RonniX-ComiX-100068056538624/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 title="Facebook" 
-                className="text-blue-600 hover:text-blue-500 transform hover:scale-110 hover:rotate-6 transition-all duration-300"
+                className="text-blue-600 hover:text-blue-500 transform hover:scale-110 hover:rotate-6 transition duration-300"
               >
-                <Facebook size={40} />
+                <Icon name="facebook" size={40} />
               </a>
             </div>
           </div>

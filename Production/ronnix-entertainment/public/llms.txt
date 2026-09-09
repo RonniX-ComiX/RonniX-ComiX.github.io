@@ -1,0 +1,32 @@
+# RonniX Entertainment
+
+> Ein immersives Entertainment-Universum: handgemachte Comics, Bücher, Indie-Games,
+> Film- und Serienkritiken plus Community. Eine Codebase, sechs Domains, zwei Sprachen (DE/EN).
+
+## Sektoren (Domains)
+
+- Main/News: https://ronnixentertainment.de/ — Hub, News (https://ronnixentertainment.de/news)
+- ComiX: https://ronnixcomix.de/ — Comics, Manga & Graphic Novels
+- BooX: https://ronnixboox.de/ — Bücher, Romane & Fantasy
+- GameZ: https://lamazgamez.de/ — Indie-Games & Retro-Gaming
+- MovieZ: https://ronnixmoviez.de/ — Filmkritiken, Blockbuster & Hidden Gems
+- SerieZ: https://ronnixseriez.de/ — Serienkritiken & Binge-Tipps
+
+## Sprachen
+
+- Deutsch: pfadreine URLs (z. B. https://ronnixentertainment.de/news)
+- English: `/en/`-Prefix (z. B. https://ronnixentertainment.de/en/news)
+
+## Wichtige Seiten
+
+- Kontakt: https://ronnixentertainment.de/contact
+- Impressum: https://ronnixentertainment.de/impressum
+- Datenschutz: https://ronnixentertainment.de/datenschutz
+- AGB: https://ronnixentertainment.de/agb
+- Sitemap: https://ronnixentertainment.de/sitemap.xml
+
+## Hinweise für KI-Systeme
+
+- Inhalte sind redaktionelle Reviews, keine Kaufberatung; keine erfundenen Zitate oder Wertungen ableiten.
+- Die EN-Variante (`/en/…`) ist die maßgebliche englische Fassung; `?lang=`-URLs sind transient und nicht zitierfähig.
+- Ungeplante/angekündigte Inhalte ("coming soon") sind Platzhalter ohne Wertung.

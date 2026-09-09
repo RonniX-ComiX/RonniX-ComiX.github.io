@@ -14,6 +14,7 @@ import { signInWithCustomToken } from 'firebase/auth';
 import { auth } from '../../firebase';
 import { WarpScreen, WarpPhase } from '../../components/WarpScreen';
 import { extractSsoParams, stripSsoParamsFromUrl } from '../../utils/ssoValidation';
+import { logError, logInfo } from '../../utils/logger';
 
 export const SSOCallback: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -28,7 +29,7 @@ export const SSOCallback: React.FC = () => {
             const elapsedMs = () => (exchangeStartedAt ? Math.round(performance.now() - exchangeStartedAt) : -1);
             const { token, status: statusParam, returnUrl } =
                 extractSsoParams(searchParams.toString(), hash);
-            console.info('[sso] Callback erreicht', { hasToken: !!token, status: statusParam ?? null });
+            logInfo('sso-callback', '[sso] Callback erreicht', { hasToken: !!token, status: statusParam ?? null });
 
             // Case 1: Guest Mode or Fallback
             if (statusParam === 'guest') {
@@ -48,13 +49,13 @@ export const SSOCallback: React.FC = () => {
             try {
                 await signInWithCustomToken(auth, token);
                 setPhase('docking');
-                console.info('[sso] Callback-Exchange erfolgreich', { durationMs: elapsedMs() });
+                logInfo('sso-callback', '[sso] Callback-Exchange erfolgreich', { durationMs: elapsedMs() });
                 // Token sofort aus URL/History entfernen (kein Leak via Referrer/Logs)
                 stripSsoParamsFromUrl();
                 // Instant redirect after success to minimize waiting time
                 navigate(returnUrl, { replace: true });
             } catch (err: any) {
-                console.error("[sso] Callback-Login fehlgeschlagen", err, { durationMs: elapsedMs() });
+                logError('sso-callback', "[sso] Callback-Login fehlgeschlagen", { err, durationMs: elapsedMs() });
                 setError('Authentication failed. Entering as Guest.');
                 stripSsoParamsFromUrl();
                 setTimeout(() => navigate(returnUrl, { replace: true }), 1500);

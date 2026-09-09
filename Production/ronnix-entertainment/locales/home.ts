@@ -24,6 +24,7 @@ export const home = {
       titleStart: 'Eine Reise durch die Welt von',
       titleEnd: '', // Entfernt, da "RonniX Entertainment" nun fest im Code steht
       subtitle: 'Entdecke handgezeichnete Welten, spannende Romane und interaktive Indie-Games.',
+      ctaPrimary: 'Universum entdecken',
       latestTitle: 'Frisch aus dem Universum',
       quickNav: 'Schnellzugriff',
       btnNews: 'News',
@@ -33,6 +34,13 @@ export const home = {
       btnMoviez: 'MovieZ',
       btnSeriez: 'SerieZ',
       btnContact: 'Kontakt'
+    },
+    search: {
+      title: 'Suche',
+      placeholder: 'Titel suchen …',
+      hint: 'Tipp: Die Suche läuft über Beitragstitel (deutsch & englisch).',
+      noResults: 'Nichts gefunden — anderer Begriff?',
+      resultsFor: 'Treffer für'
     },
     news: {
       title: 'News & Updates',
@@ -81,7 +89,10 @@ export const home = {
       messagePlaceholder: 'Deine Nachricht an mich...',
       submit: 'Nachricht senden',
       formSubject: 'Neue Nachricht von der Website!',
-      formAutoResponse: 'Vielen Dank für deine Nachricht! Ich werde mich schnellstmöglich melden.'
+      formAutoResponse: 'Vielen Dank für deine Nachricht! Ich werde mich schnellstmöglich melden.',
+      thanksTitle: 'Signal empfangen!',
+      thanksText: 'Danke für deine Nachricht – das RonniX-Team meldet sich bald bei dir.',
+      backHome: 'Zurück zur Startseite'
     },
     admin: {
         createTitle: 'Neuen Beitrag erstellen',
@@ -221,6 +232,7 @@ export const home = {
       titleStart: 'A journey through the world of',
       titleEnd: '', // Removed
       subtitle: 'Discover hand-drawn worlds, exciting novels, and interactive indie games.',
+      ctaPrimary: 'Explore the universe',
       latestTitle: 'Fresh from the Universe',
       quickNav: 'Quick Access',
       btnNews: 'News',
@@ -230,6 +242,13 @@ export const home = {
       btnMoviez: 'MovieZ',
       btnSeriez: 'SerieZ',
       btnContact: 'Contact'
+    },
+    search: {
+      title: 'Search',
+      placeholder: 'Search titles …',
+      hint: 'Tip: search runs across post titles (German & English).',
+      noResults: 'Nothing found — try another term?',
+      resultsFor: 'Results for'
     },
     news: {
       title: 'News & Updates',
@@ -278,7 +297,10 @@ export const home = {
       messagePlaceholder: 'Your message to me...',
       submit: 'Send Message',
       formSubject: 'New message from the website!',
-      formAutoResponse: 'Thank you for your message! I will get back to you as soon as possible.'
+      formAutoResponse: 'Thank you for your message! I will get back to you as soon as possible.',
+      thanksTitle: 'Signal received!',
+      thanksText: 'Thanks for your message – the RonniX team will get back to you soon.',
+      backHome: 'Back to home'
     },
     admin: {
         createTitle: 'Create New Post',

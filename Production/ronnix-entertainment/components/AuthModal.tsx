@@ -10,7 +10,7 @@
  */
 
 import React, { useState } from 'react';
-import { X, Mail, Lock, User as UserIcon, AlertCircle, Loader2 } from 'lucide-react';
+import { Icon } from './icons/Icon';
 import { auth, googleProvider, db } from '../firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, getRedirectResult, updateProfile, sendEmailVerification } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -18,6 +18,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { getCurrentCategory, isLocalhost } from '../utils/domainConfig';
 import { buildSeedUrl } from '../utils/ssoValidation';
+import { logError, logWarn } from '../utils/logger';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -72,7 +73,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                  return true; // Redirecting...
              }
           } catch (e) {
-              console.error('[sso] Seed-Weiterleitung fehlgeschlagen, bleibe lokal', e);
+              logWarn('auth-modal', 'Seed-Weiterleitung fehlgeschlagen, bleibe lokal', e);
               // Fallback: Just close modal and stay local
           }
       }
@@ -88,7 +89,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await createUserWithEmailAndPassword(auth, email, password);
         if (auth.currentUser) {
             await updateProfile(auth.currentUser, {
                 displayName: username
@@ -107,7 +108,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       }
       
     } catch (err: any) {
-      console.error(err);
+      logError('auth-modal', 'E-Mail-Login fehlgeschlagen', err);
       handleError(err);
       setLoading(false);
     }
@@ -141,7 +142,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               setLoading(false);
           }
       } catch (err: any) {
-          console.error(err);
+          logError('auth-modal', 'Google-Login fehlgeschlagen', err);
           handleError(err);
           setLoading(false);
       }
@@ -175,7 +176,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         {/* Loading Overlay for SSO Seed */}
         {loading && !error && (
             <div className="absolute inset-0 bg-neutral-950/80 z-50 flex flex-col items-center justify-center animate-fade-in">
-                <Loader2 className="w-12 h-12 text-red-500 animate-spin mb-4" />
+                <Icon name="loader" className="w-12 h-12 text-red-500 animate-spin mb-4" />
                 <p className="text-white font-retro tracking-wide animate-pulse">
                     {t.authModal.loading}
                 </p>
@@ -189,7 +190,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             disabled={loading}
             className="absolute right-4 top-4 text-gray-400 hover:text-white transition-colors z-50 p-2 disabled:opacity-0"
           >
-            <X size={24} />
+            <Icon name="x" size={24} />
           </button>
           <h2 className="text-3xl font-retro text-white tracking-wide drop-shadow-md">
             {isLogin ? t.authModal.welcomeBack : t.authModal.joinCrew}
@@ -203,7 +204,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         <div className="p-8">
           {error && (
             <div className="mb-6 bg-red-900/20 border border-red-600/50 text-red-200 p-3 rounded-lg flex items-center gap-2 text-sm">
-              <AlertCircle size={16} className="flex-shrink-0" />
+              <Icon name="alert-circle" size={16} className="flex-shrink-0" />
               <span>{error}</span>
             </div>
           )}
@@ -214,7 +215,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             disabled={loading}
             className="w-full bg-white text-black font-bold py-3 rounded-lg flex items-center justify-center gap-3 mb-6 hover:bg-gray-200 transition-colors disabled:opacity-50"
           >
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+            <img src="/images/google.svg" alt="Google" loading="lazy" decoding="async" className="w-5 h-5" />
             {t.authModal.googleBtn}
           </button>
           
@@ -228,15 +229,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             
             {!isLogin && (
                <div className="space-y-1">
-                 <label className="text-xs font-bold text-gray-500 uppercase">{t.authModal.username}</label>
+                  <label htmlFor="auth-username" className="text-xs font-bold text-gray-400 uppercase">{t.authModal.username}</label>
                  <div className="relative">
-                   <UserIcon className="absolute left-3 top-3 text-gray-500" size={18} />
-                   <input 
-                     type="text" 
-                     required
-                     value={username}
+                   <Icon name="user" className="absolute left-3 top-3 text-gray-500" size={18} />
+                    <input
+                      id="auth-username"
+                      type="text"
+                      required
+                      value={username}
                      onChange={(e) => setUsername(e.target.value)}
-                     className="w-full bg-black border border-neutral-700 text-white pl-10 pr-4 py-2.5 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all placeholder-gray-700"
+                     className="w-full bg-black border border-neutral-700 text-white pl-10 pr-4 py-2.5 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition placeholder-gray-500"
                      placeholder={t.authModal.usernamePlaceholder}
                    />
                  </div>
@@ -244,30 +246,32 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             )}
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-500 uppercase">{t.authModal.email}</label>
+               <label htmlFor="auth-email" className="text-xs font-bold text-gray-400 uppercase">{t.authModal.email}</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 text-gray-500" size={18} />
-                <input 
-                  type="email" 
-                  required
-                  value={email}
+                <Icon name="mail" className="absolute left-3 top-3 text-gray-500" size={18} />
+                 <input
+                   id="auth-email"
+                   type="email"
+                   required
+                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-black border border-neutral-700 text-white pl-10 pr-4 py-2.5 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all placeholder-gray-700"
+                  className="w-full bg-black border border-neutral-700 text-white pl-10 pr-4 py-2.5 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition placeholder-gray-500"
                   placeholder={t.authModal.emailPlaceholder}
                 />
               </div>
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-500 uppercase">{t.authModal.password}</label>
+               <label htmlFor="auth-password" className="text-xs font-bold text-gray-400 uppercase">{t.authModal.password}</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 text-gray-500" size={18} />
-                <input 
-                  type="password" 
-                  required
-                  value={password}
+                <Icon name="lock" className="absolute left-3 top-3 text-gray-500" size={18} />
+                 <input
+                   id="auth-password"
+                   type="password"
+                   required
+                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-black border border-neutral-700 text-white pl-10 pr-4 py-2.5 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all placeholder-gray-700"
+                  className="w-full bg-black border border-neutral-700 text-white pl-10 pr-4 py-2.5 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition placeholder-gray-500"
                   placeholder={t.authModal.passwordPlaceholder}
                 />
               </div>
@@ -276,7 +280,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             <button 
               type="submit"
               disabled={loading}
-              className="w-full mt-6 bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white font-bold py-3 rounded-lg transform transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-red-900/40 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full mt-6 bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white font-bold py-3 rounded-lg transform transition duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-red-900/40 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLogin ? t.authModal.loginBtn : t.authModal.registerBtn}
             </button>

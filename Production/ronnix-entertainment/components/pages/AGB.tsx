@@ -1,3 +1,10 @@
+/**
+ * pages/AGB.tsx — Allgemeine Geschäftsbedingungen (statische Legal-Seite).
+ *
+ * Feature: rendert `t.legal.terms` zweisprachig im Legal-Kartenlayout.
+ * Benutzung: `/agb` (+ `/en/agb`) in `App.tsx` (indexiert, mit Description).
+ * Gehört NICHT hierher: andere Legal-Texte (Datenschutz, Impressum).
+ */
 
 import React from 'react';
 import { SectionTitle } from '../SectionTitle';

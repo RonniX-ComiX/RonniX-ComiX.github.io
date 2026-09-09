@@ -20,6 +20,7 @@ import { getCurrentCategory, isLocalhost } from '../utils/domainConfig';
 import { SSO_CONFIG } from '../utils/ssoConfig';
 import { buildBounceUrl, stripSsoParamsFromUrl } from '../utils/ssoValidation';
 import { isSsoAllowedOrigin } from '../utils/ssoConfig';
+import { logError, logInfo, logWarn } from '../utils/logger';
 
 interface SilentMessage {
   source?: string;
@@ -54,7 +55,7 @@ export const SSOAutoLogin: React.FC = () => {
     started.current = true;
     const checkStartedAt = typeof performance !== 'undefined' ? performance.now() : 0;
     const elapsedMs = () => (checkStartedAt ? Math.round(performance.now() - checkStartedAt) : -1);
-    console.info('[sso] Silent-Check gestartet');
+    logInfo('sso-autologin', '[sso] Silent-Check gestartet');
 
     const callbackUrl = `${window.location.origin}/sso`;
     const finalPath = window.location.pathname + window.location.search;
@@ -84,10 +85,10 @@ export const SSOAutoLogin: React.FC = () => {
       } catch { /* ignore */ }
       markChecked();
       if (!hint) {
-        console.info('[sso] Silent-Check ohne Session, kein Bounce (Gast bleibt)');
+        logInfo('sso-autologin', '[sso] Silent-Check ohne Session, kein Bounce (Gast bleibt)');
         return;
       }
-      console.info('[sso] Silent-Check unklar trotz Login-Hinweis → Full-Bounce');
+      logInfo('sso-autologin', '[sso] Silent-Check unklar trotz Login-Hinweis → Full-Bounce');
       window.location.replace(buildBounceUrl(callbackUrl, finalPath, 'full'));
     };
 
@@ -100,20 +101,20 @@ export const SSOAutoLogin: React.FC = () => {
 
       if (data.status === 'guest') {
         done = true;
-        console.info('[sso] Silent-Check: Gast', { durationMs: elapsedMs() });
+        logInfo('sso-autologin', '[sso] Silent-Check: Gast', { durationMs: elapsedMs() });
         markChecked();
         cleanup();
         return;
       }
       if (data.status === 'token' && data.token) {
         done = true;
-        console.info('[sso] Silent-Check: Token erhalten', { length: data.token.length, durationMs: elapsedMs() });
+        logInfo('sso-autologin', '[sso] Silent-Check: Token erhalten', { length: data.token.length, durationMs: elapsedMs() });
         try {
           await signInWithCustomToken(auth, data.token);
           stripSsoParamsFromUrl();
-          console.info('[sso] Silent-Login erfolgreich', { durationMs: elapsedMs() });
+          logInfo('sso-autologin', '[sso] Silent-Login erfolgreich', { durationMs: elapsedMs() });
         } catch (e) {
-          console.error('[sso] Silent-Login fehlgeschlagen', e);
+          logError('sso-autologin', '[sso] Silent-Login fehlgeschlagen', e);
         }
         markChecked();
         cleanup();
@@ -132,13 +133,12 @@ export const SSOAutoLogin: React.FC = () => {
     const timer = window.setTimeout(() => {
       if (done) return;
       done = true;
-      console.warn('[sso] Silent-Check Timeout', { durationMs: elapsedMs() });
+      logWarn('sso-autologin', '[sso] Silent-Check Timeout', { durationMs: elapsedMs() });
       cleanup();
       fallbackBounce();
     }, SSO_CONFIG.silentCheckTimeoutMs);
 
     return cleanup;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, loading, searchParams]);
 
   return null;

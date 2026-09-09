@@ -20,6 +20,7 @@ import {
   buildSsoUrl,
 } from '../../utils/ssoValidation';
 import { isSsoAllowedOrigin } from '../../utils/ssoConfig';
+import { logError, logInfo, logWarn } from '../../utils/logger';
 
 export const SSOBounce: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -41,7 +42,7 @@ export const SSOBounce: React.FC = () => {
 
             const callback = sanitizeCallbackUrl(rawCallback);
             if (!callback) {
-                console.warn('[sso] Bounce ohne gültiges Callback');
+                logWarn('sso-bounce', '[sso] Bounce ohne gültiges Callback');
                 if (isSilent) return; // Parent läuft in Timeout → Gast, keine Navigation.
                 setStatus('Fehler: Ungültiges Rücksprungziel.');
                 return;
@@ -56,7 +57,7 @@ export const SSOBounce: React.FC = () => {
             // ---- Still-Modus: per postMessage antworten, nie navigieren ----
             if (isSilent) {
                 if (currentUser) {
-                    console.info('[sso] Silent-Bounce: User vorhanden, erzeuge Token');
+                    logInfo('sso-bounce', '[sso] Silent-Bounce: User vorhanden, erzeuge Token');
                     try {
                         const token = await getCrossDomainToken();
                         if (token) {
@@ -64,15 +65,15 @@ export const SSOBounce: React.FC = () => {
                                 { source: 'ronnix-sso', status: 'token', token, returnUrl: finalPath },
                                 targetOrigin,
                             );
-                            console.info('[sso] Silent-Bounce: Token gesendet', { length: token.length });
+                            logInfo('sso-bounce', '[sso] Silent-Bounce: Token gesendet', { length: token.length });
                             return;
                         }
                         throw new Error('Token was empty');
                     } catch (e) {
-                        console.error('[sso] Silent-Bounce Token-Fehler', e);
+                        logError('sso-bounce', '[sso] Silent-Bounce Token-Fehler', e);
                     }
                 } else {
-                    console.info('[sso] Silent-Bounce: Gast');
+                    logInfo('sso-bounce', '[sso] Silent-Bounce: Gast');
                 }
                 window.parent.postMessage(
                     { source: 'ronnix-sso', status: 'guest', returnUrl: finalPath },
@@ -92,7 +93,7 @@ export const SSOBounce: React.FC = () => {
                     }
                     throw new Error("Token was empty");
                 } catch (e: any) {
-                    console.error("[sso] Bounce Token-Fehler", e);
+                    logError('sso-bounce', "[sso] Bounce Token-Fehler", e);
                     if (import.meta.env.DEV && e?.message && (String(e.message).includes('internal') || String(e.message).includes('permission'))) {
                          setStatus('Server-Fehler bei der Token-Erstellung.');
                          setErrorDetails('TIPP (nur DEV): "IAM Service Account Credentials API" in der Google Cloud Console aktivieren.');

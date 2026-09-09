@@ -1,27 +1,56 @@
+/**
+ * hooks/useCachedPosts.ts — Post-Listen mit SWR-Cache (Memory + localStorage).
+ *
+ * Feature: lädt Posts je Kategorie (`latest` = alle, Limit je Aufruf),
+ * filtert Scheduled für Gäste heraus, Admins sehen alles. Cache-Fenster und
+ * Key-Prefix kommen aus `utils/appConfig.ts` (§4). Benutzung:
+ * `useCachedPosts('comics')` in Sections. Gehört NICHT hierher: Rendering
+ * (Sections), Einzel-Post (`pages/PostDetail.tsx`).
+ */
+
 import { useState, useEffect } from 'react';
 import { collection, query, where, orderBy, getDocs, Timestamp, limit, QueryConstraint } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
+import { CACHE_DURATION_MS, CACHE_KEY_PREFIX } from '../utils/appConfig';
+import { logError } from '../utils/logger';
 
 // In-Memory + localStorage Persist (SWR: sofort Cache, dann Revalidate)
 const memCache: Record<string, { data: any[], timestamp: number }> = {};
-const CACHE_DURATION = 5 * 60 * 1000; // 5 Minuten
+const CACHE_DURATION = CACHE_DURATION_MS;
 
+/**
+ * Liest einen Cache-Eintrag aus localStorage (nur innerhalb `CACHE_DURATION_MS` gültig).
+ * @param key Cache-Schlüssel ohne Prefix.
+ * @returns Geparste Daten oder `null` (fehlt/alt/kaputt).
+ */
 const readPersisted = (key: string) => {
   try {
-    const raw = localStorage.getItem(`ronnix_cache_${key}`);
+    const raw = localStorage.getItem(`${CACHE_KEY_PREFIX}${key}`);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (Date.now() - parsed.timestamp < CACHE_DURATION) return parsed.data;
   } catch {}
   return null;
 };
+/**
+ * Schreibt einen Cache-Eintrag mit Zeitstempel nach localStorage (still bei Quota-Fehlern).
+ * @param key Cache-Schlüssel ohne Prefix.
+ * @param data Zu persistierende Post-Liste.
+ */
 const writePersisted = (key: string, data: any[]) => {
   try {
-    localStorage.setItem(`ronnix_cache_${key}`, JSON.stringify({ data, timestamp: Date.now() }));
+    localStorage.setItem(`${CACHE_KEY_PREFIX}${key}`, JSON.stringify({ data, timestamp: Date.now() }));
   } catch {}
 };
 
+/**
+ * Lädt Posts mit SWR-Semantik (Memory → localStorage → Firestore-Revalidate).
+ * Gäste bekommen nur Veröffentlichtes (`publishedAt <= now`), Admins alles.
+ * @param category Firestore-Kategorie oder `'latest'` (alle, Default-Limit 5).
+ * @param limitCount Max. Docs (Default: 5 bei `latest`, sonst 12).
+ * @returns `{ posts, loading, error }`.
+ */
 export const useCachedPosts = (category: string | 'latest', limitCount?: number) => {
   const { isAdmin } = useAuth();
   const [posts, setPosts] = useState<any[]>([]);
@@ -91,7 +120,7 @@ export const useCachedPosts = (category: string | 'latest', limitCount?: number)
         writePersisted(cacheKey, postsData);
         if (!cancelled) setPosts(postsData);
       } catch (err: any) {
-          console.error(`Error fetching ${category}:`, err);
+          logError('cached-posts', `Error fetching ${category}`, err);
           if (!cancelled) setError(err?.code || 'fetch-failed');
       } finally {
           if (!cancelled) setLoading(false);

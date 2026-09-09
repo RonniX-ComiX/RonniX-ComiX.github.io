@@ -240,13 +240,55 @@ exports.onCommentCreated = onDocumentCreated("posts/{postId}/comments/{commentId
 });
 
 /**
- * Host-aware Sitemap mit Image-Namespace (Cover für LCP/SEO).
+ * Host-aware robots.txt (ein Build, 6 Domains): liefert je Host die passende
+ * Sitemap-Zeile. Wird via firebase.json-Rewrite auf /robots.txt gelegt;
+ * public/robots.txt bleibt statischer Fallback (Main) für Function-Ausfälle.
+ */
+exports.robots = onRequest(async (req, res) => {
+  try {
+    const host = req.headers["x-forwarded-host"] || req.headers.host || "ronnixentertainment.de";
+    const cleanHost = String(host).split(":")[0].replace(/^www\./, "").toLowerCase();
+    const baseUrl = `https://${cleanHost}`;
+    const body = [
+      "User-agent: *",
+      "Allow: /",
+      "Disallow: /profile",
+      "Disallow: /create",
+      "Disallow: /edit/",
+      "Disallow: /sso",
+      "Disallow: /sso-bounce",
+      "Disallow: /sso-seed",
+      "Disallow: /global-logout",
+      "",
+      `# Host-aware Sitemap (Function liefert je Domain gefiltert)`,
+      `Sitemap: ${baseUrl}/sitemap.xml`,
+      "",
+    ].join("\n");
+    res.set("Content-Type", "text/plain");
+    res.set("Cache-Control", "public, max-age=3600, s-maxage=7200");
+    res.status(200).send(body);
+  } catch (error) {
+    console.error("Robots generation error:", error);
+    res.status(500).send("Error generating robots.txt");
+  }
+});
+
+/**
+ * Host-aware Sitemap mit Image-Namespace (Cover für LCP/SEO) + xhtml-hreflang.
+ * - baseUrl nutzt den www-bereinigten Host (keine www-Duplikate).
+ * - Jede Domain listet ihre statischen Routen (/news, /contact, Legal) — Main
+ *   zusätzlich die Kategorie-Aliase (/comix …). Nur veröffentlichte Posts
+ *   (publishedAt <= now, je Domain kategoriegefiltert).
+ * - Statische Seiten ohne lastmod (kein verlässliches Änderungsdatum), Posts mit.
+ * - Jede URL existiert als DE- (`/news`) und EN-Variante (`/en/news`), verlinkt
+ *   per xhtml:alternate (de/en/x-default). Kein Cross-Domain-hreflang:
+ *   die 6 Domains sind Content-Vertikale, keine Sprachvarianten.
  */
 exports.sitemap = onRequest(async (req, res) => {
   try {
     const host = req.headers["x-forwarded-host"] || req.headers.host || "ronnixentertainment.de";
-    const cleanHost = String(host).replace("www.", "").toLowerCase();
-    const baseUrl = `https://${host}`;
+    const cleanHost = String(host).split(":")[0].replace(/^www\./, "").toLowerCase();
+    const baseUrl = `https://${cleanHost}`;
     const DOMAIN_CATEGORY_MAP = {
       "ronnixcomix.de": "comics",
       "ronnixboox.de": "books",
@@ -259,22 +301,51 @@ exports.sitemap = onRequest(async (req, res) => {
     if (filterCategory) query = query.where("category", "==", filterCategory);
     const postsSnapshot = await query.get();
     const esc = (s) => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">`;
-    let staticPages = ["/"];
+    // Ein Eintrag je Sprach-URL, jeweils mit hreflang-Trio auf beide Varianten.
+    const entry = (dePath, enPath, extra) => {
+      const deUrl = `${baseUrl}${dePath}`;
+      const enUrl = `${baseUrl}${enPath}`;
+      return `\n<url><loc>${esc(deUrl)}</loc>` +
+        `<xhtml:link rel="alternate" hreflang="de" href="${esc(deUrl)}"/>` +
+        `<xhtml:link rel="alternate" hreflang="en" href="${esc(enUrl)}"/>` +
+        `<xhtml:link rel="alternate" hreflang="x-default" href="${esc(deUrl)}"/>` +
+        `${extra || ''}</url>`;
+    };
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:xhtml="http://www.w3.org/1999/xhtml">`;
+    let staticPages = ["/", "/news", "/contact", "/impressum", "/datenschutz", "/agb"];
     if (!filterCategory) {
-      staticPages.push("/news", "/contact", "/impressum", "/datenschutz", "/comix", "/boox", "/gamez", "/moviez", "/seriez");
+      staticPages.push("/comix", "/boox", "/gamez", "/moviez", "/seriez");
     }
     staticPages.forEach((page) => {
-      xml += `\n<url><loc>${baseUrl}${page}</loc><changefreq>weekly</changefreq><priority>${page === "/" ? "1.0" : "0.8"}</priority></url>`;
+      const enPath = page === "/" ? "/en" : `/en${page}`;
+      const prio = page === "/" ? "1.0" : "0.8";
+      // DE-Eintrag
+      xml += entry(page, enPath, `<changefreq>weekly</changefreq><priority>${prio}</priority>`);
+      // EN-Eintrag (eigener <loc>, identisches hreflang-Trio)
+      const deUrl = `${baseUrl}${page}`;
+      const enUrl = `${baseUrl}${enPath}`;
+      xml += `\n<url><loc>${esc(enUrl)}</loc>` +
+        `<xhtml:link rel="alternate" hreflang="de" href="${esc(deUrl)}"/>` +
+        `<xhtml:link rel="alternate" hreflang="en" href="${esc(enUrl)}"/>` +
+        `<xhtml:link rel="alternate" hreflang="x-default" href="${esc(deUrl)}"/>` +
+        `<changefreq>weekly</changefreq><priority>${prio}</priority></url>`;
     });
     postsSnapshot.forEach((doc) => {
       const data = doc.data();
       const lastModDate = data.updatedAt ? data.updatedAt.toDate() : (data.publishedAt ? data.publishedAt.toDate() : new Date());
       const title = data.title || doc.id;
       const img = data.coverUrl && typeof data.coverUrl === "string" && data.coverUrl.startsWith("http") ? data.coverUrl : null;
-      xml += `\n<url><loc>${baseUrl}/post/${doc.id}</loc><lastmod>${lastModDate.toISOString()}</lastmod><changefreq>monthly</changefreq><priority>0.9</priority>`;
-      if (img) xml += `<image:image><image:loc>${esc(img)}</image:loc><image:title>${esc(title)}</image:title></image:image>`;
-      xml += `</url>`;
+      const dePath = `/post/${doc.id}`;
+      const enPath = `/en/post/${doc.id}`;
+      const deUrl = `${baseUrl}${dePath}`;
+      const enUrl = `${baseUrl}${enPath}`;
+      const lastmod = `<lastmod>${lastModDate.toISOString()}</lastmod>`;
+      const imgTag = img ? `<image:image><image:loc>${esc(img)}</image:loc><image:title>${esc(title)}</image:title></image:image>` : "";
+      const links = `<xhtml:link rel="alternate" hreflang="de" href="${esc(deUrl)}"/>` +
+        `<xhtml:link rel="alternate" hreflang="en" href="${esc(enUrl)}"/>` +
+        `<xhtml:link rel="alternate" hreflang="x-default" href="${esc(deUrl)}"/>`;
+      xml += `\n<url><loc>${esc(deUrl)}</loc>${links}${lastmod}<changefreq>monthly</changefreq><priority>0.9</priority>${imgTag}</url>`;
+      xml += `\n<url><loc>${esc(enUrl)}</loc>${links}${lastmod}<changefreq>monthly</changefreq><priority>0.9</priority>${imgTag}</url>`;
     });
     xml += `</urlset>`;
     res.set("Content-Type", "application/xml");

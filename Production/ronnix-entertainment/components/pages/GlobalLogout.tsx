@@ -12,6 +12,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
+import { logError, logWarn } from '../../utils/logger';
 import { httpsCallable } from 'firebase/functions';
 import { auth, functions } from '../../firebase';
 import { WarpScreen } from '../../components/WarpScreen';
@@ -33,7 +34,7 @@ export const GlobalLogout: React.FC = () => {
                         const globalSignOutFn = httpsCallable(functions, 'globalSignOut');
                         await globalSignOutFn();
                     } catch (e) {
-                        console.warn("Cloud revocation failed, continuing with local signout", e);
+                        logWarn("global-logout", "Cloud revocation failed, continuing with local signout", e);
                     }
                 }
 
@@ -66,7 +67,7 @@ export const GlobalLogout: React.FC = () => {
                 }
 
             } catch (error) {
-                console.error("Global Logout Error", error);
+                logError("global-logout", "Global Logout Error", error);
                 setStatus('Fehler beim Ausloggen.');
             }
         };

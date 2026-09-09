@@ -4,8 +4,11 @@
  * Feature: rendert pro Domain die passende Sektion (`/` je Hostname bzw. lokale
  * `?site=`-Simulation), leitet Kategorie-Pfade live per `ExternalRedirect` mit
  * SSO-Token (Fragment-Transport) weiter und mountet `SSOAutoLogin` (stiller
- * Iframe-Check), `LanguageParamSynchronizer` (`?lang=`-Handover) und SSO-Routen
+ * Iframe-Check), `LanguageParamSynchronizer` (`?lang=`-Handover → stabile
+ * `/en/`-Pfade), `LanguagePathSynchronizer` (Pfad ↔ Sprache) und SSO-Routen
  * (`/sso`, `/sso-bounce`, `/sso-seed`, `/global-logout`, alle noIndex).
+ * Alle Inhaltsrouten existieren zweisprachig (DE pfadrein, EN `/en/`-Prefix);
+ * SEO-Titel/Descriptions kommen aus `HOME_SEO` (`utils/domainConfig.ts`).
  * Gehört NICHT hierher: SSO-Details (siehe `utils/sso*.ts`, `components/SSOAutoLogin`).
  */
 
@@ -42,9 +45,20 @@ const SSOCallback = lazy(() => import('./components/pages/SSOCallback').then(m =
 const SSOBounce = lazy(() => import('./components/pages/SSOBounce').then(m => ({ default: m.SSOBounce })));
 const SSOSeed = lazy(() => import('./components/pages/SSOSeed').then(m => ({ default: m.SSOSeed })));
 const GlobalLogout = lazy(() => import('./components/pages/GlobalLogout').then(m => ({ default: m.GlobalLogout })));
+const Danke = lazy(() => import('./components/pages/Danke').then(m => ({ default: m.Danke })));
+const Search = lazy(() => import('./components/pages/Search').then(m => ({ default: m.Search })));
 import { SSOAutoLogin } from './components/SSOAutoLogin';
 import { ViewTransitionHandler } from './components/ViewTransitionHandler';
-import { getCurrentCategory, isLocalhost, getLocalSiteOverride, setLocalSiteOverride } from './utils/domainConfig';
+import {
+  getCurrentCategory,
+  isLocalhost,
+  getLocalSiteOverride,
+  setLocalSiteOverride,
+  stripLangPrefix,
+  localizePath,
+  HOME_SEO,
+  TRANSIENT_PATHS,
+} from './utils/domainConfig';
 import type { SiteCategory } from './utils/domainConfig';
 
 const RouteFallback = () => (
@@ -62,12 +76,92 @@ const NotFound = () => (
   </div>
 );
 
+// Seiten-Wrapper (einmal definiert, je Sprache einmal geroutet — kein Copy-Paste pro `/en/`).
+const NewsPage = () => (
+  <div className="container mx-auto px-6 py-24 animate-fade-in">
+    <SEO
+      title="News & Updates"
+      description="Neuigkeiten aus dem RonniX-Universum: Comics, Bücher, Games, Filme & Serien."
+      descriptionEn="News & updates from the RonniX universe: comics, books, games, movies & series."
+      canonicalPath="/news"
+    />
+    <NewsSection />
+  </div>
+);
+
+const ContactPage = () => (
+  <div className="container mx-auto px-6 py-24 animate-fade-in">
+    <SEO
+      title="Kontakt"
+      titleEn="Contact"
+      description="Kontakt zum RonniX-Team."
+      descriptionEn="Contact the RonniX team."
+      canonicalPath="/contact"
+    />
+    <ContactSection />
+  </div>
+);
+
+const ProfilePage = () => (
+  <div className="animate-fade-in">
+    <SEO title="Dein Profil" noIndex />
+    <UserProfile />
+  </div>
+);
+
+const CreatePage = () => (
+  <div className="animate-fade-in">
+    <SEO title="Erstellen" noIndex />
+    <CreatePost />
+  </div>
+);
+
+const EditPage = () => (
+  <div className="animate-fade-in">
+    <SEO title="Bearbeiten" noIndex />
+    <CreatePost />
+  </div>
+);
+
+interface LegalPageProps {
+  title: string;
+  description: string;
+  descriptionEn: string;
+  canonicalPath: string;
+  Page: React.ComponentType;
+}
+
+const LegalPage: React.FC<LegalPageProps> = ({ title, description, descriptionEn, canonicalPath, Page }) => (
+  <>
+    <SEO title={title} description={description} descriptionEn={descriptionEn} canonicalPath={canonicalPath} />
+    <Page />
+  </>
+);
+
+const ThanksPage = () => (
+  <div className="animate-fade-in">
+    <SEO title="Danke" titleEn="Thank you" noIndex />
+    <Danke />
+  </div>
+);
+
+const IMPRESSUM_COPY = {
+  description: 'Impressum von RonniX Entertainment – Anbieterkennzeichnung und Kontakt.',
+  descriptionEn: 'Legal notice of RonniX Entertainment – provider identification and contact.',
+};
+const DATENSCHUTZ_COPY = {
+  description: 'Datenschutzerklärung von RonniX Entertainment – so schützen wir deine Daten.',
+  descriptionEn: 'Privacy policy of RonniX Entertainment – how we protect your data.',
+};
+const AGB_COPY = {
+  description: 'AGB von RonniX Entertainment – Nutzungsbedingungen der Community.',
+  descriptionEn: 'Terms of RonniX Entertainment – community terms of use.',
+};
+
 const MaintenanceBanner = () => {
-  let maintenance = false;
-  try {
-    maintenance = useRemoteConfigFlags().maintenanceMode;
-  } catch {}
-  if (!maintenance) return null;
+  // Unbedingt aufgerufen (Hooks-Reihenfolge); der Hook wirft nie (Defaults bei Fehlern).
+  const { maintenanceMode } = useRemoteConfigFlags();
+  if (!maintenanceMode) return null;
   return (
     <div className="bg-yellow-600 text-black text-center text-sm font-bold py-2 px-4">
       Wartungsmodus – einige Funktionen sind temporär eingeschränkt.
@@ -138,29 +232,76 @@ const ScrollToTop = () => {
   return null;
 };
 
-// NEW: Component to sync URL param ?lang=de/en to Context
-// This ensures that when arriving from another domain, the language preference is respected immediately.
-// UPDATED: Now consumes and removes the param so manual switching works afterwards.
+// Skip-Link für Tastatur-/Screenreader-Nutzer (WCAG 2.4.1): springt direkt zum Inhalt.
+const SkipLink = () => {
+  const { t } = useLanguage();
+  return (
+    <a
+      href="#main"
+      className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:bg-red-700 focus:text-white focus:px-4 focus:py-2 focus:rounded focus:font-bold"
+    >
+      {t.navigation.navbar.skipToContent}
+    </a>
+  );
+};
+
+// Component to sync URL param ?lang=de/en to Context.
+// Cross-Domain-Handover (?lang=) wird einmalig in STABILE Pfade konsumiert:
+// EN → `/en/...` (indexierbar), DE → pfadrein. Restliche Params (?site=) bleiben.
+// Danach steuert der Pfad (`LanguagePathSynchronizer`), der Param ist verbraucht.
 const LanguageParamSynchronizer = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
   const { language, setLanguage } = useLanguage();
 
   React.useEffect(() => {
     const langParam = searchParams.get('lang');
-    if (langParam === 'de' || langParam === 'en') {
-      // 1. Sync URL param to Context/LocalStorage if different
-      if (langParam !== language) {
-        setLanguage(langParam);
-      }
-      
-      // 2. CLEANUP: Remove the query parameter.
-      // This prevents the URL from overriding the user's manual choice later.
-      // We "consume" the parameter once, then clean it up to allow manual toggling.
-      const newParams = new URLSearchParams(searchParams);
-      newParams.delete('lang');
-      setSearchParams(newParams, { replace: true });
+    if (langParam !== 'de' && langParam !== 'en') return;
+
+    if (langParam !== language) {
+      setLanguage(langParam);
     }
-  }, [searchParams, language, setLanguage, setSearchParams]);
+
+    const rest = new URLSearchParams(searchParams);
+    rest.delete('lang');
+    const qs = rest.toString();
+    const targetPath = langParam === 'en'
+      ? localizePath(stripLangPrefix(pathname).clean, 'en')
+      : stripLangPrefix(pathname).clean;
+    navigate({ pathname: targetPath, search: qs ? `?${qs}` : '' }, { replace: true });
+  }, [searchParams, pathname, language, setLanguage, navigate]);
+
+  return null;
+};
+
+// Component to sync the stable `/en/` path prefix with Context.
+// - `/en/...` → Sprache EN (stabile, indexierbare EN-URL).
+// - `/de/...` → Redirect auf pfadreine DE-URL (DE bleibt ohne Prefix).
+// - Kein Prefix + gespeicherte EN-Sprache → Redirect auf `/en/...`.
+// Transiente Routen (SSO/Logout) sind ausgenommen.
+const LanguagePathSynchronizer = () => {
+  const { pathname, search } = useLocation();
+  const navigate = useNavigate();
+  const { language, setLanguage } = useLanguage();
+
+  React.useEffect(() => {
+    const { clean, lang } = stripLangPrefix(pathname);
+    if (TRANSIENT_PATHS.some((t) => clean === t || clean.startsWith(t + '/'))) return;
+
+    if (lang === 'en') {
+      if (language !== 'en') setLanguage('en');
+      return;
+    }
+    if (lang === 'de') {
+      if (language !== 'de') setLanguage('de');
+      navigate({ pathname: clean, search }, { replace: true });
+      return;
+    }
+    if (language === 'en') {
+      navigate({ pathname: localizePath(clean, 'en'), search }, { replace: true });
+    }
+  }, [pathname, search, language, setLanguage, navigate]);
 
   return null;
 };
@@ -238,76 +379,54 @@ const App: React.FC = () => {
   // Auf Live-Domains kommt die Kategorie vom Hostname, auf localhost zusätzlich
   // von der ?site=-Simulation — und die /comix|/boox|...-Routen nutzen dieselbe
   // Funktion, damit lokale Tests nie auf Production springen.
+  // SEO-Titel/Descriptions sind keyword-first und zweisprachig (`HOME_SEO`,
+  // `utils/domainConfig.ts`); die Sprache wählt `SEO.tsx` selbst per Context.
+  const renderCategoryHome = (category: Exclude<SiteCategory, 'main'>, Section: React.ComponentType) => {
+    const copy = HOME_SEO[category];
+    return (
+      <div className="container mx-auto px-6 py-24 animate-fade-in">
+        <SEO
+          title={copy.de.title}
+          titleEn={copy.en.title}
+          description={copy.de.description}
+          descriptionEn={copy.en.description}
+        />
+        <StructuredData type="WebSite" data={{}} />
+        <Section />
+      </div>
+    );
+  };
+
   const renderCategorySection = (category: SiteCategory) => {
     switch (category) {
       case 'comics':
-        return (
-          <div className="container mx-auto px-6 py-12 animate-fade-in">
-            <SEO 
-              title="Startseite" 
-              description="RonniX Entertainment - Rezensionen zu Graphic Novels, Superhelden und Manga." 
-            />
-            <StructuredData type="WebSite" data={{}} />
-            <ComicsSection />
-          </div>
-        );
+        return renderCategoryHome('comics', ComicsSection);
       case 'boox':
-        return (
-          <div className="container mx-auto px-6 py-12 animate-fade-in">
-            <SEO 
-              title="Startseite" 
-              description="RonniX BooX - Bücher, Romane und Fantasy Welten im Check." 
-            />
-            <StructuredData type="WebSite" data={{}} />
-            <BooksSection />
-          </div>
-        );
+        return renderCategoryHome('boox', BooksSection);
       case 'gamez':
-        return (
-          <div className="container mx-auto px-6 py-12 animate-fade-in">
-            <SEO 
-              title="Startseite" 
-              description="Lamaz GameZ - Indie Games, Retro Klassiker und Gaming Culture." 
-            />
-            <StructuredData type="WebSite" data={{}} />
-            <GamesSection />
-          </div>
-        );
+        return renderCategoryHome('gamez', GamesSection);
       case 'moviez':
-        return (
-          <div className="container mx-auto px-6 py-12 animate-fade-in">
-            <SEO 
-              title="Startseite" 
-              description="RonniX MovieZ - Filmkritiken, Blockbuster und Hidden Gems." 
-            />
-            <StructuredData type="WebSite" data={{}} />
-            <MoviesSection />
-          </div>
-        );
+        return renderCategoryHome('moviez', MoviesSection);
       case 'seriez':
-        return (
-          <div className="container mx-auto px-6 py-12 animate-fade-in">
-            <SEO 
-              title="Startseite" 
-              description="RonniX SerieZ - Binge-Watching Tipps und Serien Analysen." 
-            />
-            <StructuredData type="WebSite" data={{}} />
-            <SeriesSection />
-          </div>
-        );
+        return renderCategoryHome('seriez', SeriesSection);
       case 'main':
-      default:
+      default: {
+        const copy = HOME_SEO.main;
         return (
           <>
             <SEO
-              title="Home"
-              description="RonniX Entertainment - Dein Hub für Comics, Bücher, Games und Filme."
+              title={copy.de.title}
+              titleEn={copy.en.title}
+              description={copy.de.description}
+              descriptionEn={copy.en.description}
             />
             <StructuredData type="WebSite" data={{}} />
+            <StructuredData type="Organization" data={{}} />
             <Hero />
             <HomeLatestSection />
           </>
         );
+      }
     }
   };
 
@@ -329,70 +448,74 @@ const App: React.FC = () => {
             <ScrollToTop />
             <ViewTransitionHandler />
             <LanguageParamSynchronizer />
+            <LanguagePathSynchronizer />
+            <SkipLink />
             <SSOAutoLogin />
             <MaintenanceBanner />
 
-            <div className="flex flex-col min-h-screen bg-neutral-950 font-sans text-white overflow-x-hidden w-full relative">
+            <div className="flex flex-col min-h-[100dvh] bg-neutral-950 font-sans text-white overflow-x-clip w-full relative">
               <SiteSwitcher />
               <Navbar />
 
-              <main className="flex-grow">
+              <main id="main" className="flex-grow">
                 <Suspense fallback={<RouteFallback />}>
                 <Routes>
+                  {/* Stabile Sprach-URLs: DE pfadrein, EN mit `/en/`-Prefix
+                      (react-router v6: je Sprache eine Route, keine Arrays). */}
                   <Route path="/" element={renderHomeRoute()} />
+                  <Route path="/en" element={renderHomeRoute()} />
 
                   {/* SSO Handlers (noIndex, kein Duplicate, markenreiner Tab-Titel ohne "SSO") */}
                   <Route path="/sso" element={<><SEO title="SSO" noIndex bareTitle /><SSOCallback /></>} />
+                  <Route path="/en/sso" element={<><SEO title="SSO" noIndex bareTitle /><SSOCallback /></>} />
                   <Route path="/sso-bounce" element={<><SEO title="SSO" noIndex bareTitle /><SSOBounce /></>} />
+                  <Route path="/en/sso-bounce" element={<><SEO title="SSO" noIndex bareTitle /><SSOBounce /></>} />
                   <Route path="/sso-seed" element={<><SEO title="SSO" noIndex bareTitle /><SSOSeed /></>} />
+                  <Route path="/en/sso-seed" element={<><SEO title="SSO" noIndex bareTitle /><SSOSeed /></>} />
                   <Route path="/global-logout" element={<><SEO title="Logout" noIndex bareTitle /><GlobalLogout /></>} />
+                  <Route path="/en/global-logout" element={<><SEO title="Logout" noIndex bareTitle /><GlobalLogout /></>} />
 
-                  <Route path="/news" element={
-                    <div className="container mx-auto px-6 py-12 animate-fade-in">
-                      <SEO title="News & Updates" description="Neuigkeiten aus dem RonniX-Universum: Comics, Bücher, Games, Filme & Serien." canonicalPath="/news" />
-                      <NewsSection />
-                    </div>
-                  } />
+                  <Route path="/news" element={<NewsPage />} />
+                  <Route path="/en/news" element={<NewsPage />} />
 
                   <Route path="/comix" element={categoryRoute('comics', 'https://ronnixcomix.de')} />
+                  <Route path="/en/comix" element={categoryRoute('comics', 'https://ronnixcomix.de')} />
                   <Route path="/boox" element={categoryRoute('boox', 'https://ronnixboox.de')} />
+                  <Route path="/en/boox" element={categoryRoute('boox', 'https://ronnixboox.de')} />
                   <Route path="/gamez" element={categoryRoute('gamez', 'https://lamazgamez.de')} />
+                  <Route path="/en/gamez" element={categoryRoute('gamez', 'https://lamazgamez.de')} />
                   <Route path="/moviez" element={categoryRoute('moviez', 'https://ronnixmoviez.de')} />
+                  <Route path="/en/moviez" element={categoryRoute('moviez', 'https://ronnixmoviez.de')} />
                   <Route path="/seriez" element={categoryRoute('seriez', 'https://ronnixseriez.de')} />
+                  <Route path="/en/seriez" element={categoryRoute('seriez', 'https://ronnixseriez.de')} />
 
-                  <Route path="/contact" element={
-                    <div className="container mx-auto px-6 py-12 animate-fade-in">
-                      <SEO title="Kontakt" description="Kontakt zum RonniX-Team." canonicalPath="/contact" />
-                      <ContactSection />
-                    </div>
-                  } />
+                  <Route path="/contact" element={<ContactPage />} />
+                  <Route path="/en/contact" element={<ContactPage />} />
 
-                  <Route path="/profile" element={
-                    <div className="animate-fade-in">
-                      <SEO title="Dein Profil" noIndex />
-                      <UserProfile />
-                    </div>
-                  } />
+                  <Route path="/danke" element={<ThanksPage />} />
+                  <Route path="/en/danke" element={<ThanksPage />} />
 
-                  <Route path="/create" element={
-                    <div className="animate-fade-in">
-                      <SEO title="Erstellen" noIndex />
-                      <CreatePost />
-                    </div>
-                  } />
+                  <Route path="/search" element={<Search />} />
+                  <Route path="/en/search" element={<Search />} />
 
-                  <Route path="/edit/:id" element={
-                    <div className="animate-fade-in">
-                      <SEO title="Bearbeiten" noIndex />
-                      <CreatePost />
-                    </div>
-                  } />
+                  <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/en/profile" element={<ProfilePage />} />
+
+                  <Route path="/create" element={<CreatePage />} />
+                  <Route path="/en/create" element={<CreatePage />} />
+
+                  <Route path="/edit/:id" element={<EditPage />} />
+                  <Route path="/en/edit/:id" element={<EditPage />} />
 
                   <Route path="/post/:id" element={<PostDetail />} />
+                  <Route path="/en/post/:id" element={<PostDetail />} />
 
-                  <Route path="/impressum" element={<><SEO title="Impressum" canonicalPath="/impressum" /><Impressum /></>} />
-                  <Route path="/datenschutz" element={<><SEO title="Datenschutz" canonicalPath="/datenschutz" /><Datenschutz /></>} />
-                  <Route path="/agb" element={<><SEO title="AGB" canonicalPath="/agb" /><AGB /></>} />
+                  <Route path="/impressum" element={<LegalPage title="Impressum" canonicalPath="/impressum" Page={Impressum} {...IMPRESSUM_COPY} />} />
+                  <Route path="/en/impressum" element={<LegalPage title="Impressum" canonicalPath="/impressum" Page={Impressum} {...IMPRESSUM_COPY} />} />
+                  <Route path="/datenschutz" element={<LegalPage title="Datenschutz" canonicalPath="/datenschutz" Page={Datenschutz} {...DATENSCHUTZ_COPY} />} />
+                  <Route path="/en/datenschutz" element={<LegalPage title="Datenschutz" canonicalPath="/datenschutz" Page={Datenschutz} {...DATENSCHUTZ_COPY} />} />
+                  <Route path="/agb" element={<LegalPage title="AGB" canonicalPath="/agb" Page={AGB} {...AGB_COPY} />} />
+                  <Route path="/en/agb" element={<LegalPage title="AGB" canonicalPath="/agb" Page={AGB} {...AGB_COPY} />} />
 
                   <Route path="*" element={<NotFound />} />
                 </Routes>

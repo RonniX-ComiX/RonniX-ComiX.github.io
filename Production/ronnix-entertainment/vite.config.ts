@@ -1,8 +1,8 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 
 // Entfernt Tailwind-CDN DEV_ONLY beim Build (Dev≠Prod vermeiden)
-const removeDevScripts = () => {
+const removeDevScripts = (): Plugin => {
   return {
     name: 'remove-dev-scripts',
     apply: 'build' as const,
@@ -38,7 +38,6 @@ export default defineConfig(({
           if (id.includes('node_modules')) {
             if (id.includes('firebase')) return 'firebase';
             if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) return 'react-vendor';
-            if (id.includes('lucide-react')) return 'icons';
             if (id.includes('dompurify')) return 'utils';
           }
         }
@@ -49,4 +48,4 @@ export default defineConfig(({
   // Build: npm run build:ssg  (vite-ssg build). Fallback: normaler vite build.
   // Prerender (Phase 2): vite-ssg-react CLI — statische Routen /, /news, /contact, /impressum, /datenschutz, /agb
   // Hosting bleibt Firebase Hosting (kein App Hosting). Siehe docs/PRERENDER.md.
-} as any));
+}));

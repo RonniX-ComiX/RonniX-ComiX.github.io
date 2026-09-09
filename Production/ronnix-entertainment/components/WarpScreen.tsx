@@ -148,7 +148,7 @@ export const WarpScreen: React.FC<WarpScreenProps> = ({
             {[0, 1, 2].map((step) => (
               <span
                 key={step}
-                className={`h-1.5 rounded-full transition-all ${step <= activeStep ? 'bg-red-600' : 'bg-neutral-800'}`}
+                className={`h-1.5 rounded-full transition ${step <= activeStep ? 'bg-red-600' : 'bg-neutral-800'}`}
                 style={{
                   width: step === activeStep && !reduceMotion ? 34 : 18,
                   transitionDuration: `${crossfadeMs}ms`,
