@@ -4,7 +4,7 @@
  * Feature: Logo + Slogan (H1) + Subtext (`t.home.hero.subtitle`, max. 20 Worte)
  * + primärer CTA (`t.home.hero.ctaPrimary` → News, lokalisiert) + `QuickNav`
  * als Sektor-Auswahl (7 Bereiche). Intro-Animation nur beim Erstbesuch je
- * Session (`sessionStorage`), `motion-safe:` respektiert Reduced Motion.
+ * Session (`sessionStorage`).
  * Das Logo trägt echte Maße + `fetchpriority="high"` (LCP).
  * Benutzung: nur auf `/` der Main-Domain (`App.tsx`). Gehört NICHT hierher:
  * Latest-Posts (`sections/HomeLatestSection.tsx`), Sektor-Sections.
@@ -13,6 +13,7 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { localizePath } from '../utils/domainConfig';
+import { versionedAssetUrl } from '../utils/appConfig';
 import { QuickNav } from './QuickNav';
 import { ComicButton } from './ComicButton';
 
@@ -38,9 +39,9 @@ export const Hero: React.FC = () => {
       <div className="container mx-auto px-6 relative z-10 flex flex-col items-center w-full max-w-6xl">
 
         {/* 1. BRANDING: Logo/Image (LCP: echte Maße + hohe Priorität) */}
-        <div className={`mx-auto mb-8 w-full max-w-4xl relative flex items-center justify-center ${shouldAnimate ? 'motion-safe:animate-fade-in' : ''}`}>
+        <div className={`mx-auto mb-8 w-full max-w-4xl relative flex items-center justify-center ${shouldAnimate ? 'animate-fade-in' : ''}`}>
              <img
-                src="./images/RonniX.png"
+                 src={versionedAssetUrl('/images/RonniX.png')}
                 alt="RonniX Entertainment"
                 width="2192"
                 height="754"
@@ -50,11 +51,8 @@ export const Hero: React.FC = () => {
              />
         </div>
 
-        {/* 2. SEKTOR-EYEBROW + SLOGAN */}
-        <p className="font-gaming text-[10px] md:text-xs tracking-[0.35em] uppercase text-red-500 mb-6">
-          RONNIX UNIVERSE
-        </p>
-        <h1 className={`font-retro text-2xl md:text-5xl text-white text-center max-w-4xl leading-tight drop-shadow-[0_4px_4px_rgba(0,0,0,1)] ${shouldAnimate ? 'motion-safe:animate-slide-up' : ''}`}>
+        {/* 2. SLOGAN */}
+        <h1 className={`font-retro text-2xl md:text-5xl text-white text-center max-w-4xl leading-tight drop-shadow-[0_4px_4px_rgba(0,0,0,1)] ${shouldAnimate ? 'animate-slide-up' : ''}`}>
           {t.home.hero.titleStart} <br className="hidden lg:block"/>
           <span className="bg-gradient-to-b from-white via-gray-200 to-neutral-400 bg-clip-text text-transparent inline-block pb-2 pr-2">
             RonniX Entertainment

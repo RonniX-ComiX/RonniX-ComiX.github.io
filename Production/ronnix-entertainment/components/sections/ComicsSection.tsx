@@ -16,6 +16,7 @@ import { useCachedPosts } from '../../hooks/useCachedPosts';
 import { localizePath } from '../../utils/domainConfig';
 import { PostItemListSchema } from '../PostItemListSchema';
 import { ScrollReveal } from '../ScrollReveal';
+import { AdminCreateButton } from '../post/AdminCreateButton';
 
 export const ComicsSection: React.FC = () => {
   const { t, language } = useLanguage();
@@ -32,7 +33,8 @@ export const ComicsSection: React.FC = () => {
 
   return (
     <section className="min-h-[50vh]">
-      <SectionTitle title={t.home.comics.title} eyebrow="PANEL SECTOR" />
+      <SectionTitle title={t.home.comics.title} />
+      <AdminCreateButton category="comics" />
       <PostItemListSchema posts={posts} name={t.home.comics.title} />
       
       {loading ? (
@@ -82,9 +84,9 @@ export const ComicsSection: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Dynamic Theme Badge */}
+                    {/* Dynamic Theme Badge (erstes Theme aus Multi-Themes) */}
                     <div className="absolute top-4 right-4 bg-red-600 text-white font-retro px-3 py-1 text-lg transform rotate-3 shadow-md border-2 border-white uppercase z-30">
-                        {t.home.admin.themes[post.theme as keyof typeof t.home.admin.themes] || post.theme || 'Review'}
+                        {t.home.admin.themes[((post.themes?.[0] || post.theme) as keyof typeof t.home.admin.themes)] || post.themes?.[0] || post.theme || 'Review'}
                     </div>
                 </div>
                 </Link>

@@ -2,8 +2,9 @@
  * nav/navStyles.ts — Sektor-Farbwelt der Navigation (Single Source).
  *
  * Feature: mappt Routen auf Tailwind-Farbklassen (Text/Hover/Icon/Underline/
- * Glow): Main/News/Kontakt pink, ComiX rot, BooX blau, GameZ grün, MovieZ
- * gelb, SerieZ orange. Reine Funktion, kein State. Benutzung:
+ * Glow): Main/News/Kontakt pink, ComiX rot, BooX blau, GameZ teal, MovieZ
+ * grün, SerieZ orange (konsistent mit `categoryAccent` in `SectorCard.tsx`).
+ * Reine Funktion, kein State. Benutzung:
  * `getNavStyle(href)` in `Navbar.tsx` + `MobileDrawer.tsx`.
  * Gehört NICHT hierher: Link-Aufbau (`utils/domainConfig.ts`), Icons
  * (`icons/Icon.tsx`).
@@ -52,21 +53,21 @@ export const getNavStyle = (href: string): NavLinkStyles => {
         };
       case '/gamez':
         return {
+          activeText: 'text-teal-400',
+          hoverText: 'group-hover:text-teal-400',
+          activeIcon: 'text-teal-400 rotate-12',
+          hoverIcon: 'group-hover:text-teal-400',
+          underline: 'bg-teal-500',
+          shadow: 'shadow-[0_0_10px_rgba(45,212,191,0.8)]'
+        };
+      case '/moviez':
+        return {
           activeText: 'text-green-500',
           hoverText: 'group-hover:text-green-500',
           activeIcon: 'text-green-500 rotate-12',
           hoverIcon: 'group-hover:text-green-500',
           underline: 'bg-green-600',
           shadow: 'shadow-[0_0_10px_rgba(22,163,74,0.8)]'
-        };
-      case '/moviez':
-        return {
-          activeText: 'text-yellow-400',
-          hoverText: 'group-hover:text-yellow-400',
-          activeIcon: 'text-yellow-400 rotate-12',
-          hoverIcon: 'group-hover:text-yellow-400',
-          underline: 'bg-yellow-400',
-          shadow: 'shadow-[0_0_10px_rgba(250,204,21,0.8)]'
         };
       case '/seriez':
         return {

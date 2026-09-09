@@ -1,11 +1,12 @@
 /**
  * pages/PostDetail.tsx — Artikel-Seite (`/post/:id`): Hero, Meta-Karte, Votes, Share.
  *
- * Feature: lädt Post + Autor, zeigt Hero-Cover, Metadaten-Karte, Like/Dislike
- * (Realtime), Share-Buttons, Admin-Toolbar (Edit/Delete) sowie SEO
- * (Article-Typ, BreadcrumbList). Kommentare leben in `post/PostComments.tsx`
- * (Liste) + `post/CommentItem.tsx` (rekursiver Einzelkommentar).
- * Scheduled Posts sehen nur Admins (andere: Coming-Soon + `noIndex`).
+ * Feature: lädt Post + Autor, zeigt Hero-Cover (lokales Fallback), gruppierte
+ * Meta-Karte (Story/Art/Publishing: Credits getrennt, Herkunft DE vs. Original,
+ * Multi-Themes), Like/Dislike (Realtime), Share (nativ + Netzwerke),
+ * Admin-Toolbar (Edit/Delete) sowie SEO (Article-Typ, BreadcrumbList).
+ * Kommentare leben in `post/PostComments.tsx` (+ `CommentItem.tsx`).
+ * Scheduled Posts sehen nur Admins (Coming-Soon + `noIndex`).
  * Gehört NICHT hierher: Kommentar-Logik (siehe `post/`), Editor
  * (`components/RichTextEditor.tsx`, `CreatePost.tsx`).
  */
@@ -19,17 +20,21 @@ import {
   Timestamp,
   onSnapshot,
 } from 'firebase/firestore';
-import DOMPurify from 'dompurify';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../../firebase';
 import { Icon } from '../icons/Icon';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
-import { getLinkUrl } from '../../utils/domainConfig';
+import { getLinkUrl, postCategoryToRoute } from '../../utils/domainConfig';
 import { SEO } from '../SEO'; // Import SEO
 import { StructuredData } from '../StructuredData'; // Import StructuredData
 import { PostComments } from '../post/PostComments'; // Kommentar-Sektion (eigene Datei)
+import { CommentNotifyToggle } from '../post/CommentNotifyToggle';
 import { logError, logInfo } from '../../utils/logger';
+import { getExcerpt, getReadingMinutes, getThemeLabels } from '../../utils/postExcerpt';
+import { hasCredits, hasOrigin, serializeCoverArtists } from '../../utils/postTypes';
+import { sanitizeRender } from '../../utils/richTextSanitize';
+import { COVER_FALLBACK, versionedAssetUrl } from '../../utils/appConfig';
 
 // --- MAIN PAGE COMPONENT ---
 
@@ -44,6 +49,7 @@ export const PostDetail: React.FC = () => {
   // Interactive State (Kommentare leben in `post/PostComments.tsx`)
   const [userVote, setUserVote] = useState<'like' | 'dislike' | null>(null);
   const [isVoting, setIsVoting] = useState(false);
+  const [sanitizedHtml, setSanitizedHtml] = useState('');
   
   const { t, language } = useLanguage(); 
   const { currentUser, isAdmin } = useAuth();
@@ -125,6 +131,23 @@ export const PostDetail: React.FC = () => {
       return () => unsubscribe();
   }, [id]);
 
+  // 4. Sanitized HTML für Renderer (zentrale Allowlist, YouTube-nocookie)
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      const raw = post ? ((language === 'en' && post.contentEn) ? post.contentEn : post.content) : '';
+      try {
+        const clean = await sanitizeRender(raw || '');
+        if (!cancelled) setSanitizedHtml(clean);
+      } catch (e) {
+        logError('post-detail', 'sanitize failed', e);
+        if (!cancelled) setSanitizedHtml('');
+      }
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [post, language]);
+
   // --- HANDLERS ---
 
   const handleDelete = async () => {
@@ -133,7 +156,7 @@ export const PostDetail: React.FC = () => {
         setIsDeleting(true);
         try {
             await deleteDoc(doc(db, "posts", id));
-            navigate(`/${post.category}`);
+            navigate(postCategoryToRoute(post.category));
         } catch (error) {
             logError('post-detail',"Error deleting post:", error);
             alert("Fehler beim Löschen des Beitrags.");
@@ -158,20 +181,28 @@ export const PostDetail: React.FC = () => {
       setIsVoting(false);
   };
 
-  const handleShare = (platform: string) => {
+  const handleShare = async (platform: string) => {
       const url = window.location.href;
-      const text = `${t.home.common.shareMessage} ${post.title}`;
+      const text = `${t.home.common.shareMessage} ${post?.title ?? ''}`;
+      if (platform === 'native' && typeof navigator !== 'undefined' && (navigator as any).share) {
+          try { await (navigator as any).share({ title: post?.title ?? '', text, url }); } catch {}
+          return;
+      }
       let shareUrl = '';
       if (platform === 'facebook') {
           shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
       } else if (platform === 'twitter') {
           shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+      } else if (platform === 'whatsapp') {
+          shareUrl = `https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`;
+      } else if (platform === 'telegram') {
+          shareUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
       } else if (platform === 'copy') {
-          navigator.clipboard.writeText(url);
+          try { await navigator.clipboard.writeText(url); } catch {}
           alert(t.home.common.linkCopied);
           return;
       }
-      if (shareUrl) window.open(shareUrl, '_blank', 'width=600,height=400');
+      if (shareUrl) window.open(shareUrl, '_blank', 'noopener,width=600,height=540');
   };
 
   if (loading) {
@@ -223,39 +254,52 @@ export const PostDetail: React.FC = () => {
       return cat.charAt(0).toUpperCase() + cat.slice(1);
   };
 
-  const getRouteFromCategory = (cat: string) => {
-      switch(cat) {
-          case 'books': return '/boox';
-          case 'games': return '/gamez';
-          case 'movies': return '/moviez';
-          case 'series': return '/seriez';
-          default: return `/${cat}`;
-      }
-  }
-
-  const getThemeName = (th: string) => {
-      return t.home.admin.themes[th as keyof typeof t.home.admin.themes] || th || 'Review';
-  }
+  const getRouteFromCategory = (cat: string) => postCategoryToRoute(cat);
 
   const displayAuthorName = authorData?.name || post.authorName || 'RonniX';
   const displayTitle = (language === 'en' && post.titleEn) ? post.titleEn : post.title;
   const displayContent = (language === 'en' && post.contentEn) ? post.contentEn : post.content;
-  
-  // Strip HTML for SEO description
-  const plainTextDescription = displayContent.replace(/<[^>]+>/g, '').substring(0, 160) + '...';
 
-  const hasMetadata = post.itemAuthor || post.publisher || post.pageCount || post.releaseYear || post.developer || post.director || post.studio || post.seasonCount || post.episodeCount || post.productionYears;
+  // SEO-Description: SSG-sicher, Wortgrenze (statt Regex-Strip).
+  const plainTextDescription = getExcerpt(displayContent, 160);
+  const readingMinutes = getReadingMinutes(displayContent);
+  const themeLabels = getThemeLabels(post, t.home.admin.themes);
+  const coverSrc = post.coverUrl ? post.coverUrl : versionedAssetUrl(COVER_FALLBACK);
+
+  const credits = {
+    executiveEditor: post.executiveEditor || '',
+    coverArtists: Array.isArray(post.coverArtists) ? post.coverArtists : [],
+    author: post.author || post.itemAuthor || '',
+    artist: post.artist || '',
+    inker: post.inker || '',
+    colorist: post.colorist || '',
+    letterer: post.letterer || '',
+    editor: post.editor || '',
+  };
+  const origin = {
+    releaseYearDe: post.releaseYearDe || post.releaseYear || '',
+    releaseYearOriginal: post.releaseYearOriginal || '',
+    originCountry: post.originCountry || '',
+    publisherDe: post.publisherDe || post.publisher || '',
+    publisherOriginal: post.publisherOriginal || '',
+  };
+  const showCredits = hasCredits(credits);
+  const showOrigin = hasOrigin(origin);
+  const coverArtistsText = serializeCoverArtists(credits.coverArtists);
+
+  const hasMetadata = showCredits || showOrigin || post.pageCount || post.developer || post.director || post.producer || post.screenwriter || post.studio || post.seasonCount || post.episodeCount || post.productionYears || post.cast || post.runtime;
 
   const routePath = getRouteFromCategory(post.category);
   const backLinkObj = getLinkUrl(routePath, language);
 
   // Prepare Structured Data Props
-  const schemaType = post.theme === 'review' ? 'Review' : 'Article';
+  const primaryTheme = (Array.isArray(post.themes) && post.themes[0]) || post.theme || 'review';
+  const schemaType = primaryTheme === 'review' ? 'Review' : 'Article';
   const publishedIso = post.publishedAt?.toDate().toISOString();
   const schemaData: any = {
       headline: displayTitle,
       description: plainTextDescription,
-      image: post.coverUrl,
+      image: coverSrc,
       datePublished: publishedIso,
       dateModified: post.updatedAt?.toDate().toISOString() || publishedIso,
       authorName: displayAuthorName
@@ -264,7 +308,7 @@ export const PostDetail: React.FC = () => {
   if (schemaType === 'Review') {
       schemaData.itemName = displayTitle;
       schemaData.itemType = post.category === 'games' ? 'Game' : post.category === 'books' ? 'Book' : 'CreativeWork';
-      schemaData.itemAuthor = post.itemAuthor || post.developer || post.director || 'Unknown';
+      schemaData.itemAuthor = credits.author || post.developer || post.director || 'Unknown';
   }
 
   return (
@@ -273,7 +317,7 @@ export const PostDetail: React.FC = () => {
       <SEO
         title={displayTitle}
         description={plainTextDescription}
-        image={post.coverUrl}
+        image={coverSrc}
         imageAlt={displayTitle}
         type="article"
         publishedTime={publishedIso}
@@ -294,7 +338,7 @@ export const PostDetail: React.FC = () => {
       {/* Hero Header */}
       <div className="relative w-full h-[40vh] md:h-[50vh] overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/60 to-transparent z-10"></div>
-        <img src={post.coverUrl} alt={displayTitle} fetchPriority="high" decoding="async" className="w-full h-full object-cover" />
+        <img src={coverSrc} alt={displayTitle} fetchPriority="high" decoding="async" className="w-full h-full object-cover" onError={(e) => { if (e.currentTarget.src !== window.location.origin + versionedAssetUrl(COVER_FALLBACK)) e.currentTarget.src = versionedAssetUrl(COVER_FALLBACK); }} />
         
         {isScheduled && (
             <div className="absolute top-0 left-0 w-full bg-yellow-600/90 text-black text-center py-2 font-bold uppercase tracking-widest z-30">
@@ -331,16 +375,24 @@ export const PostDetail: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-4 flex-wrap">
+                            <div className="flex items-center gap-2 flex-wrap">
                                 <Icon name="tag" size={18} className="text-red-500 drop-shadow-none" />
-                             <span className="bg-red-900/60 border border-red-500/50 px-3 py-1 rounded text-red-100 uppercase text-xs font-bold tracking-wider shadow-sm">
-                                    {getThemeName(post.theme)}
-                                </span>
+                                {themeLabels.map((label) => (
+                                  <span key={label} className="bg-red-900/60 border border-red-500/50 px-3 py-1 rounded text-red-100 uppercase text-xs font-bold tracking-wider shadow-sm">
+                                    {label}
+                                  </span>
+                                ))}
+                                {readingMinutes > 0 && (
+                                  <span className="text-xs text-gray-300 font-mono">• {readingMinutes} Min.</span>
+                                )}
                             </div>
-                            
+
                             <div className="flex items-center gap-2 md:ml-4 bg-black/60 rounded-full px-3 py-1 border border-neutral-700">
                                 <Icon name="share" size={16} className="text-gray-400" />
+                                <button onClick={() => handleShare('native')} title="Teilen"
+           className="p-1.5 min-h-[44px] min-w-[44px] flex items-center justify-center hover:text-white text-gray-300 transition-colors"><Icon name="share" size={18}
+           /></button>
                                 <button onClick={() => handleShare('facebook')} title="Facebook"
            className="p-1.5 min-h-[44px] min-w-[44px] flex items-center justify-center hover:text-[#1877F2] text-gray-300 transition-colors"><Icon name="facebook" size={18}
            /></button>
@@ -388,22 +440,34 @@ export const PostDetail: React.FC = () => {
                 </div>
             )}
 
-            {/* METADATA CARD */}
+            {/* METADATA CARD (gruppiert: Story / Art / Publishing) */}
             {hasMetadata && (
                 <div className="bg-neutral-900 border-l-4 border-red-600 p-6 rounded-r-lg shadow-lg mb-10">
                     <h3 className="text-xl font-retro text-white mb-4 flex items-center gap-2 border-b border-neutral-800 pb-2">
                         <Icon name="book-open" className="text-red-500" size={20} /> {t.home.postDetail.metaHeader}
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
-                        {post.itemAuthor && <div className="flex flex-col"><span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-1"><Icon name="pen-tool" size={12} /> {t.home.admin.metadata.itemAuthor}</span><span className="text-white text-lg font-medium">{post.itemAuthor}</span></div>}
+                        {credits.author && <div className="flex flex-col"><span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-1"><Icon name="pen-tool" size={12} /> {t.home.admin.metadata.creditAuthor}</span><span className="text-white text-lg font-medium">{credits.author}</span></div>}
+                        {credits.artist && <div className="flex flex-col"><span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-1"><Icon name="palette" size={12} /> {t.home.admin.metadata.creditArtist}</span><span className="text-white text-lg font-medium">{credits.artist}</span></div>}
+                        {credits.inker && <div className="flex flex-col"><span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-1"><Icon name="pen-tool" size={12} /> {t.home.admin.metadata.creditInker}</span><span className="text-white text-lg font-medium">{credits.inker}</span></div>}
+                        {credits.colorist && <div className="flex flex-col"><span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-1"><Icon name="palette" size={12} /> {t.home.admin.metadata.creditColorist}</span><span className="text-white text-lg font-medium">{credits.colorist}</span></div>}
+                        {credits.letterer && <div className="flex flex-col"><span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-1"><Icon name="file-text" size={12} /> {t.home.admin.metadata.creditLetterer}</span><span className="text-white text-lg font-medium">{credits.letterer}</span></div>}
+                        {coverArtistsText && <div className="flex flex-col"><span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-1"><Icon name="image" size={12} /> {t.home.admin.metadata.coverArtists}</span><span className="text-white text-lg font-medium">{coverArtistsText}</span></div>}
+                        {credits.executiveEditor && <div className="flex flex-col"><span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-1"><Icon name="shield" size={12} /> {t.home.admin.metadata.executiveEditor}</span><span className="text-white text-lg font-medium">{credits.executiveEditor}</span></div>}
+                        {credits.editor && <div className="flex flex-col"><span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-1"><Icon name="book-open" size={12} /> {t.home.admin.metadata.creditEditor}</span><span className="text-white text-lg font-medium">{credits.editor}</span></div>}
+                        {(origin.releaseYearDe || origin.releaseYearOriginal || origin.originCountry) && (
+                          <div className="flex flex-col"><span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-1"><Icon name="calendar" size={12} /> {t.home.admin.metadata.releaseYearDe} / {t.home.admin.metadata.releaseYearOriginal}</span><span className="text-white text-lg font-medium">{[origin.releaseYearDe ? `${origin.releaseYearDe} (DE)` : '', origin.releaseYearOriginal ? `${origin.releaseYearOriginal} (Original)` : '', origin.originCountry].filter(Boolean).join(' • ')}</span></div>
+                        )}
+                        {(origin.publisherDe || origin.publisherOriginal) && (
+                          <div className="flex flex-col"><span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-1"><Icon name="briefcase" size={12} /> {t.home.admin.metadata.publisherDe} / {t.home.admin.metadata.publisherOriginal}</span><span className="text-white text-lg font-medium">{[origin.publisherDe, origin.publisherOriginal ? `(${origin.publisherOriginal})` : ''].filter(Boolean).join(' ')}</span></div>
+                        )}
                         {post.developer && <div className="flex flex-col"><span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-1"><Icon name="gamepad" size={12} /> {t.home.admin.metadata.developer}</span><span className="text-white text-lg font-medium">{post.developer}</span></div>}
                         {post.director && <div className="flex flex-col"><span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-1"><Icon name="clapperboard" size={12} /> {t.home.admin.metadata.director}</span><span className="text-white text-lg font-medium">{post.director}</span></div>}
                         {post.producer && <div className="flex flex-col"><span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-1"><Icon name="briefcase" size={12} /> {t.home.admin.metadata.producer}</span><span className="text-white text-lg font-medium">{post.producer}</span></div>}
                         {post.screenwriter && <div className="flex flex-col"><span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-1"><Icon name="film" size={12} /> {t.home.admin.metadata.screenwriter}</span><span className="text-white text-lg font-medium">{post.screenwriter}</span></div>}
-                        {post.publisher && <div className="flex flex-col"><span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-1"><Icon name="briefcase" size={12} /> {t.home.admin.metadata.publisher}</span><span className="text-white text-lg font-medium">{post.publisher}</span></div>}
                         {post.studio && <div className="flex flex-col"><span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-1"><Icon name="briefcase" size={12} /> {t.home.admin.metadata.studio}</span><span className="text-white text-lg font-medium">{post.studio}</span></div>}
                         {post.pageCount && <div className="flex flex-col"><span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-1"><Icon name="layers" size={12} /> {t.home.admin.metadata.pageCount}</span><span className="text-white text-lg font-medium">{post.pageCount} {t.home.postDetail.metaPages}</span></div>}
-                        {(post.releaseYear || post.runtime) && <div className="flex flex-col"><span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-1"><Icon name="calendar" size={12} /> {t.home.admin.metadata.releaseYear} / {t.home.admin.metadata.runtime}</span><span className="text-white text-lg font-medium">{post.releaseYear || ''}{post.releaseYear && post.runtime ? ' • ' : ''}{post.runtime ? `${post.runtime} min` : ''}</span></div>}
+                        {post.runtime && <div className="flex flex-col"><span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-1"><Icon name="clock" size={12} /> {t.home.admin.metadata.runtime}</span><span className="text-white text-lg font-medium">{post.runtime} min</span></div>}
                         {post.seasonCount && <div className="flex flex-col"><span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-1"><Icon name="layers" size={12} /> {t.home.admin.metadata.seasonCount}</span><span className="text-white text-lg font-medium">{post.seasonCount}</span></div>}
                         {post.episodeCount && <div className="flex flex-col"><span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-1"><Icon name="tv" size={12} /> {t.home.admin.metadata.episodeCount}</span><span className="text-white text-lg font-medium">{post.episodeCount}</span></div>}
                         {post.productionYears && <div className="flex flex-col"><span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-1"><Icon name="calendar-range" size={12} /> {t.home.admin.metadata.productionYears}</span><span className="text-white text-lg font-medium">{post.productionYears}</span></div>}
@@ -412,7 +476,7 @@ export const PostDetail: React.FC = () => {
                 </div>
             )}
 
-            {/* Main Text Content (DOMPurify gegen XSS aus RichTextEditor-HTML) */}
+            {/* Main Text Content (zentral sanitized, YouTube-nocookie, sichere Links) */}
             <div
                 className="prose prose-invert prose-lg max-w-none
                 prose-headings:font-retro prose-headings:text-white
@@ -421,7 +485,7 @@ export const PostDetail: React.FC = () => {
                 prose-strong:text-white
                 prose-blockquote:border-l-4 prose-blockquote:border-red-600 prose-blockquote:bg-neutral-900/50 prose-blockquote:px-4 prose-blockquote:py-1 prose-blockquote:not-italic prose-blockquote:text-gray-300
                 prose-img:rounded-lg prose-img:border prose-img:border-neutral-800"
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(displayContent || '', { ADD_ATTR: ['target', 'rel'] }) }}
+                dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
             />
             
             <div className="my-12 w-full h-px bg-neutral-800"></div>
@@ -466,6 +530,7 @@ export const PostDetail: React.FC = () => {
 
 
             {/* --- COMMENTS SECTION (State + Logik in `post/PostComments.tsx`) --- */}
+            <CommentNotifyToggle postId={id || ''} currentUser={currentUser} t={t} />
             <PostComments
                 postId={id || ''}
                 currentUser={currentUser}

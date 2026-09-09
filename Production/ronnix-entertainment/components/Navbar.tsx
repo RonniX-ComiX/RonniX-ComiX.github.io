@@ -25,6 +25,7 @@ import { MobileDrawer } from './nav/MobileDrawer';
 import { FlagDE, FlagEN } from './nav/Flags';
 import { getNavStyle } from './nav/navStyles';
 import { getLinkUrl, getCurrentCategory, getTargetCategory, stripLangPrefix, localizePath, TRANSIENT_PATHS } from '../utils/domainConfig';
+import { versionedAssetUrl } from '../utils/appConfig';
 import { logError } from '../utils/logger';
 
 // Full Screen Transition Overlay (einheitlicher WarpScreen, Zielsektor-Readout via Props)
@@ -295,7 +296,7 @@ const LogoContent = () => (
         <div className="relative">
             <div className="absolute inset-0 bg-red-600 blur-lg opacity-0 group-hover:opacity-40 transition-opacity duration-300 rounded-full"></div>
             <img
-                src="./images/ronnix_logo.png"
+                src={versionedAssetUrl('/images/ronnix_logo.png')}
                 alt="RonniX Entertainment Logo"
                 decoding="async"
                 className="h-10 md:h-12 w-auto object-contain transition-transform duration-300 group-hover:rotate-[-5deg] group-hover:scale-110 relative z-10"

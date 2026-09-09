@@ -109,33 +109,15 @@ html, body {
   outline-offset: 2px;
 }
 
-/* Reduced Motion global: Standard-UI-Animationen (Fade/Slide/Pulse/Spin) werden
-   statisch — Inhalte erscheinen sofort. Warp/View-Transition haben eigene Guards
-   weiter unten. Hover-Transitions bleiben (kurz, nutzerinitiiert). */
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-  .animate-fade-in,
-  .animate-slide-up,
-  .animate-pulse,
-  .animate-spin {
-    animation: none !important;
-  }
+/* Animationen laufen für alle (Reduced-Motion-Abschaltung bewusst entfernt,
+   Entscheidung 2026-09-09). Hover-Transitions bleiben (kurz, nutzerinitiiert). */
+html {
+  scroll-behavior: smooth;
 }
 
 /* WarpScreen: Sector-Jump-Motion (nur transform/opacity, GPU-freundlich) */
 @keyframes warp-ring-rotate {
   to { transform: rotate(360deg); }
-}
-@keyframes warp-streak-pulse {
-  0%, 100% { opacity: 0.15; }
-  50% { opacity: 0.6; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .warp-animated {
-    animation: none !important;
-  }
 }
 
 /* Same-Origin Seitenwechsel: Comic-Warp-Wipe (View Transitions API).
@@ -157,12 +139,6 @@ html, body {
 @keyframes warp-wipe-in {
   from { opacity: 0; transform: translateX(4vw) skewX(4deg); filter: brightness(1.6) saturate(1.4); }
   to { opacity: 1; transform: translateX(0) skewX(0deg); filter: brightness(1); }
-}
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
-    animation: none;
-  }
 }
 
 /* Editor Specific Overrides for WYSIWYG Content */

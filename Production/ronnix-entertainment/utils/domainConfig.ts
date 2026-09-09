@@ -171,6 +171,38 @@ export const getTargetCategory = (path: string): SiteCategory => {
   return 'main';
 };
 
+/**
+ * Mappt einen Firestore-`category`-Wert auf die interne SPA-Route.
+ * Foren: Post-Kategorie (`'comics'|'books'|'games'|'movies'|'series'|'news'`)
+ * vs. Sektions-Routen-Aliase (`/comix`, `/boox`, `/gamez`, `/moviez`,
+ * `/seriez`, `/news`). Single Source — verhindert 404 nach Create/Delete und
+ * im Back-Link (war zuvor `prefix` + `/category`, trat nur bei `news` auf).
+ * @param cat Firestore-Kategorie (z. B. `'books'`).
+ * @returns SPA-Route (z. B. `'/boox'`); unbekannt → `'/news'` (Fallback).
+ */
+export const postCategoryToRoute = (cat?: string): string => {
+  switch (cat) {
+    case 'comics':
+    case 'comix':
+      return '/comix';
+    case 'books':
+    case 'boox':
+      return '/boox';
+    case 'games':
+    case 'gamez':
+      return '/gamez';
+    case 'movies':
+    case 'moviez':
+      return '/moviez';
+    case 'series':
+    case 'seriez':
+      return '/seriez';
+    case 'news':
+    default:
+      return '/news';
+  }
+};
+
 // true auf localhost / 127.0.0.1 (egal welcher Port) — dort läuft das lokale Test-Hosting.
 export const isLocalhost = (): boolean => {
   if (typeof window === 'undefined') return false;

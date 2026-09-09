@@ -211,7 +211,10 @@ exports.updateProfileWithCooldown = onCall({enforceAppCheck: false}, async (requ
 });
 
 /**
- * Kommentar-Trigger: validiert Länge, reichert Autor-Daten an (Denormalisierung spart N+1 Reads).
+ * Kommentar-Trigger: validiert Länge, reichert Autor-Daten an (Denormalisierung spart N+1 Reads)
+ * + In-App-Notify-Fan-out (`notifications/{uid}/items`). Bewusst ohne E-Mail
+ * (reine In-App-Benachrichtigungen). Idempotent: kein Fan-out für eigene
+ * Aktionen, kein Doppelversand pro Comment (Doc-ID ist deterministisch).
  */
 exports.onCommentCreated = onDocumentCreated("posts/{postId}/comments/{commentId}", async (event) => {
   const snap = event.data;
@@ -237,6 +240,36 @@ exports.onCommentCreated = onDocumentCreated("posts/{postId}/comments/{commentId
     }
   }
   if (Object.keys(patch).length) await snap.ref.set(patch, {merge: true}).catch(() => {});
+
+  // In-App-Notify-Fan-out (best-effort, Fehler blockieren Kommentar nie)
+  try {
+    const postId = event.params.postId;
+    const commentId = event.params.commentId;
+    const subs = await db().collection("commentSubscriptions").where("postId", "==", postId).get();
+    if (subs.empty) return;
+    const postSnap = await db().collection("posts").doc(postId).get().catch(() => null);
+    const postTitle = postSnap && postSnap.exists ? (postSnap.data().title || postId) : postId;
+    const snippet = text.slice(0, 140);
+    const batch = db().batch();
+    subs.forEach((sub) => {
+      const s = sub.data() || {};
+      if (!s.uid || s.uid === data.userId) return; // keine Eigen-Benachrichtigung
+      if (s.notifyReplies === false) return;
+      const itemRef = db().collection("notifications").doc(s.uid).collection("items").doc(`${postId}_${commentId}_${s.uid}`);
+      batch.set(itemRef, {
+        postId,
+        commentId,
+        postTitle,
+        snippet,
+        authorName: data.authorName || patch.authorName || "Hero",
+        read: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+    });
+    await batch.commit().catch((e) => console.warn("notify fan-out failed", e));
+  } catch (e) {
+    console.warn("notify fan-out error", e);
+  }
 });
 
 /**

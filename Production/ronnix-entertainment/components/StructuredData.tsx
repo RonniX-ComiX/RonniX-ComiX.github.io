@@ -14,6 +14,7 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { getCurrentCategory, DOMAIN_MAP, SITE_NAMES } from '../utils/domainConfig';
+import { versionedAssetUrl } from '../utils/appConfig';
 
 type SchemaType = 'WebSite' | 'Article' | 'Review' | 'BreadcrumbList' | 'Organization' | 'ItemList';
 
@@ -44,7 +45,7 @@ const buildPublisher = (siteUrl: string) => ({
   url: 'https://ronnixentertainment.de',
   logo: {
     '@type': 'ImageObject',
-    url: `${siteUrl}/images/ronnix_logo.png`,
+    url: `${siteUrl}${versionedAssetUrl('/images/ronnix_logo.png')}`,
     width: 891,
     height: 838,
   },

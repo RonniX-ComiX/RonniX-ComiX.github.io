@@ -27,7 +27,7 @@ export type IconName =
   | 'alert-triangle' | 'alert-circle'
   | 'shield' | 'shield-alert' | 'check' | 'check-circle' | 'plus-circle'
   | 'rotate-ccw' | 'tag' | 'globe' | 'briefcase' | 'hash' | 'layers'
-  | 'arrow-left' | 'edit' | 'trash' | 'search' | 'thumbs-up' | 'thumbs-down'
+  | 'arrow-left' | 'arrow-right' | 'edit' | 'trash' | 'search' | 'thumbs-up' | 'thumbs-down'
   | 'message-square' | 'share' | 'twitter' | 'facebook' | 'instagram'
   | 'send' | 'pen-tool' | 'corner-down-right' | 'reply' | 'loader';
 
@@ -94,6 +94,7 @@ const PATHS: Record<IconName, React.ReactNode> = {
   'hash': <path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18" />,
   'layers': <><path d="m12 2 9 5-9 5-9-5z" /><path d="m3 12 9 5 9-5" /><path d="m3 17 9 5 9-5" /></>,
   'arrow-left': <path d="M19 12H5M12 19l-7-7 7-7" />,
+  'arrow-right': <path d="M5 12h14M12 5l7 7-7 7" />,
   'search': <><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></>,
   'edit': <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />,
   'pen-tool': <><path d="m12 19 7-7 3 3-7 7-3-3z" /><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" /><path d="m2 2 7.6 7.6" /><circle cx="11" cy="11" r="2" /></>,

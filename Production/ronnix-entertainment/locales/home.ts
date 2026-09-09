@@ -26,6 +26,8 @@ export const home = {
       subtitle: 'Entdecke handgezeichnete Welten, spannende Romane und interaktive Indie-Games.',
       ctaPrimary: 'Universum entdecken',
       latestTitle: 'Frisch aus dem Universum',
+      carouselPrev: 'Zurück',
+      carouselNext: 'Weiter',
       quickNav: 'Schnellzugriff',
       btnNews: 'News',
       btnComics: 'ComiX',
@@ -137,7 +139,22 @@ export const home = {
             runtime: 'Laufzeit / Dauer',
             seasonCount: 'Anzahl Staffeln',
             episodeCount: 'Anzahl Episoden',
-            productionYears: 'Produktionsjahre (z.B. 2008-2013)'
+            productionYears: 'Produktionsjahre (z.B. 2008-2013)',
+            creditsTitle: 'Credits (optional)',
+            executiveEditor: 'Chefredakteur / Executive Editor',
+            coverArtists: 'Cover-Künstler (Komma-getrennt)',
+            creditAuthor: 'Autor',
+            creditArtist: 'Zeichner',
+            creditInker: 'Tuschezeichner (Ink)',
+            creditColorist: 'Kolorist',
+            creditLetterer: 'Letterer',
+            creditEditor: 'Herausgeber / Redakteur',
+            originTitle: 'Herkunft (DE vs. Original)',
+            releaseYearDe: 'Erscheinungsjahr DE',
+            releaseYearOriginal: 'Erscheinungsjahr Original',
+            originCountry: 'Ursprungsland',
+            publisherDe: 'Verlag DE',
+            publisherOriginal: 'Verlag Original-Land'
         }
     },
     postDetail: {
@@ -159,7 +176,9 @@ export const home = {
         adminControls: 'Admin Steuerung',
         notFound: 'Beitrag nicht gefunden',
         metaHeader: 'Infos zum Werk',
-        metaPages: 'Seiten'
+        metaPages: 'Seiten',
+        notifyTitle: 'Bei neuen Kommentaren benachrichtigen',
+        notifyDesc: 'In-App-Hinweis bei Antworten auf diesen Post (jederzeit abbestellbar).'
     },
     editor: {
         undo: 'Rückgängig',
@@ -204,6 +223,7 @@ export const home = {
         videoHint: 'Das Video wird automatisch in einen responsive Player umgewandelt.',
         submitVideo: 'Video einbetten',
         invalidYoutube: 'Ungültige YouTube URL',
+        invalidUrl: 'Ungültige URL (nur https:// erlaubt).',
         hostingHint: 'Pro-Tip: Nutze imgbb.com für Hosting.',
         placeholder: 'Schreibe dein Review hier... Nutze die Toolbar für Styles!'
     }
@@ -234,6 +254,8 @@ export const home = {
       subtitle: 'Discover hand-drawn worlds, exciting novels, and interactive indie games.',
       ctaPrimary: 'Explore the universe',
       latestTitle: 'Fresh from the Universe',
+      carouselPrev: 'Previous',
+      carouselNext: 'Next',
       quickNav: 'Quick Access',
       btnNews: 'News',
       btnComics: 'ComiX',
@@ -345,7 +367,22 @@ export const home = {
             runtime: 'Runtime / Duration',
             seasonCount: 'Season Count',
             episodeCount: 'Episode Count',
-            productionYears: 'Production Years (e.g. 2008-2013)'
+            productionYears: 'Production Years (e.g. 2008-2013)',
+            creditsTitle: 'Credits (optional)',
+            executiveEditor: 'Executive Editor',
+            coverArtists: 'Cover Artists (comma-separated)',
+            creditAuthor: 'Author',
+            creditArtist: 'Artist',
+            creditInker: 'Inker',
+            creditColorist: 'Colorist',
+            creditLetterer: 'Letterer',
+            creditEditor: 'Editor',
+            originTitle: 'Origin (DE vs. Original)',
+            releaseYearDe: 'Release Year DE',
+            releaseYearOriginal: 'Release Year Original',
+            originCountry: 'Country of Origin',
+            publisherDe: 'Publisher DE',
+            publisherOriginal: 'Original Publisher'
         }
     },
     postDetail: {
@@ -367,7 +404,9 @@ export const home = {
         adminControls: 'Admin Controls',
         notFound: 'Post not found',
         metaHeader: 'Item Specs',
-        metaPages: 'Pages'
+        metaPages: 'Pages',
+        notifyTitle: 'Notify me about new comments',
+        notifyDesc: 'In-app notice on replies to this post (unsubscribe anytime).'
     },
     editor: {
         undo: 'Undo',
@@ -412,6 +451,7 @@ export const home = {
         videoHint: 'The video will be automatically converted into a responsive player.',
         submitVideo: 'Embed Video',
         invalidYoutube: 'Invalid YouTube URL',
+        invalidUrl: 'Invalid URL (https:// only).',
         hostingHint: 'Pro-Tip: Use imgbb.com for hosting.',
         placeholder: 'Write your review here... Use the toolbar for style!'
     }

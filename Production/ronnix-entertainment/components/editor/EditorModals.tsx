@@ -11,6 +11,7 @@
 
 import React from 'react';
 import { Icon } from '../icons/Icon';
+import { isSafeUrl, escapeHtml, extractYouTubeId, buildYouTubeEmbed } from '../../utils/richTextSanitize';
 
 export type EditorModalType = 'link' | 'image' | 'video';
 
@@ -54,28 +55,33 @@ export const EditorModals: React.FC<EditorModalsProps> = ({
   selectionText,
   t,
 }) => {
-  // 1. LINK INSERTION (eigener Text → HTML-Link, sonst `createLink` auf Auswahl)
+  // 1. LINK INSERTION (validiert: nur http/https, escapt Text/URL)
   const confirmLink = () => {
     restoreSelection();
     const { url, text, openNewTab } = modalInputs;
     if (url) {
+       if (!isSafeUrl(url)) { alert(t.home.editor.invalidUrl || 'Ungültige URL (nur https://).'); return; }
+       const safeUrl = escapeHtml(String(url).trim());
+       const safeText = escapeHtml(String(text || selectionText || url).slice(0, 300));
        if (text && selectionText !== null && selectionText !== text) {
-           const targetAttr = openNewTab ? ' target="_blank" rel="noopener noreferrer"' : '';
-           exec('insertHTML', `<a href="${url}"${targetAttr}>${text}</a>`);
+           const targetAttr = openNewTab ? ' target="_blank" rel="noopener noreferrer"' : ' rel="noopener noreferrer"';
+           exec('insertHTML', `<a href="${safeUrl}"${targetAttr}>${safeText}</a>`);
        } else {
-           exec('createLink', url);
+           exec('createLink', String(url).trim());
        }
     }
     closeModal();
   };
 
-  // 2. IMAGE INSERTION
+  // 2. IMAGE INSERTION (validiert + escapt Alt, Breite nur Enum)
   const confirmImage = () => {
     restoreSelection();
     const { url, alt, width } = modalInputs;
     if (url) {
-        const widthStyle = width ? `style="width: ${width};"` : '';
-        const html = `<img src="${url}" alt="${alt || ''}" loading="lazy" decoding="async" ${widthStyle} class="rounded-lg border border-neutral-700 my-4" />`;
+        if (!isSafeUrl(url)) { alert(t.home.editor.invalidUrl || 'Ungültige Bild-URL (nur https://).'); return; }
+        const allowedWidths = ['100%', '75%', '50%', '25%'];
+        const safeWidth = allowedWidths.includes(width) ? width : '100%';
+        const html = `<img src="${escapeHtml(String(url).trim())}" alt="${escapeHtml(String(alt || '').slice(0, 200))}" loading="lazy" decoding="async" style="width: ${safeWidth};" class="rounded-lg border border-neutral-700 my-4" />`;
         exec('insertHTML', html);
         // Add a paragraph break after image to allow continuing typing
         exec('insertHTML', '<p><br></p>');
@@ -83,30 +89,15 @@ export const EditorModals: React.FC<EditorModalsProps> = ({
     closeModal();
   };
 
-  // 3. YOUTUBE INSERTION
+  // 3. YOUTUBE INSERTION (nocookie-Embed, strikte ID-Validierung)
   const confirmVideo = () => {
     restoreSelection();
     const { url } = modalInputs;
     if (url) {
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-        const match = url.match(regExp);
-        const videoId = (match && match[2].length === 11) ? match[2] : null;
+        const videoId = extractYouTubeId(String(url).trim());
 
         if (videoId) {
-            const html = `
-                <div class="aspect-video w-full my-6 rounded-xl overflow-hidden border border-neutral-800 shadow-lg">
-                    <iframe
-                        width="100%"
-                        height="100%"
-                        src="https://www.youtube.com/embed/${videoId}"
-                        frameborder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowfullscreen>
-                    </iframe>
-                </div>
-                <p><br></p>
-            `;
-            exec('insertHTML', html);
+            exec('insertHTML', buildYouTubeEmbed(videoId));
         } else {
             alert(t.home.editor.invalidYoutube);
             return;

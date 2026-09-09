@@ -1,13 +1,16 @@
 /**
- * LatestPosts.tsx — Neueste Posts kategorieübergreifend (Karten + ItemList).
+ * LatestPosts.tsx — Neueste Posts kategorieübergreifend als Horizontal-Carousel.
  *
- * Feature: lädt die 5 neuesten Posts (`useCachedPosts('latest', 5)`), rendert
- * sie als Horizontal-Snap (mobil) bzw. 5er-Grid (Desktop) mit Kategorie-Farbe
- * und -Icon, Links lokalisiert. Benutzung: in `HomeLatestSection` (Main-Home).
- * Gehört NICHT hierher: Sektions-Rahmen (HomeLatestSection), Kategorien.
+ * Feature: lädt die 10 neuesten Posts (`useCachedPosts('latest', 10)`), rendert
+ * sie immer horizontal (Snap + versteckte Scrollbar) mit Pfeil-Steuerung
+ * (Zurück/Vor, Disabled an den Rändern), Touch-Swipe und Tastatur. Sektion
+ * behält dadurch konstante Höhe — kein zusätzliches vertikales Scrollen.
+ * Kategorie-Farbe/-Icon, Tilt, Dimm (Scheduled) wie gehabt, Links lokalisiert.
+ * Benutzung: in `HomeLatestSection` (Main-Home). Gehört NICHT hierher:
+ * Sektions-Rahmen (HomeLatestSection), Kategorien.
  */
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Timestamp } from 'firebase/firestore';
 import { useLanguage } from '../context/LanguageContext';
 import { Icon } from './icons/Icon';
@@ -17,10 +20,18 @@ import { PostItemListSchema } from './PostItemListSchema';
 import { SectorCard, categoryAccent } from './SectorCard';
 import { ScrollReveal } from './ScrollReveal';
 
+/** Fallback-Kartenbreite inkl. Gap (px), falls kein `<a>` im Track gefunden wird. */
+const FALLBACK_STEP = 256; // 240px Karte + 16px Gap
+/** Feste Kartenbreite bleibt gleich (mobil wie Desktop) — Höhe konstant. */
+const CARD_CLASS = 'relative flex-shrink-0 w-[240px] md:w-[260px] aspect-[2/3] snap-start';
+
 export const LatestPosts: React.FC = () => {
   const { t, language } = useLanguage();
-  // Use 'latest' as category key and pass limit 5
-  const { posts, loading } = useCachedPosts('latest', 5);
+  // 'latest' als Kategorie-Key, 10 Posts für echten Carousel-Weg.
+  const { posts, loading } = useCachedPosts('latest', 10);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [canPrev, setCanPrev] = useState(false);
+  const [canNext, setCanNext] = useState(false);
 
   /**
    * Formatiert einen Firestore-Timestamp zu `TT.MM.JJJJ` (aktuelle Sprache).
@@ -56,19 +67,70 @@ export const LatestPosts: React.FC = () => {
           case 'news': return 'bg-pink-600 border-pink-400';
           case 'comics': return 'bg-red-600 border-red-400';
           case 'books': return 'bg-blue-600 border-blue-400';
-          case 'games': return 'bg-green-600 border-green-400';
-          case 'movies': return 'bg-yellow-500 border-yellow-300 text-black';
+          case 'games': return 'bg-teal-500 border-teal-300 text-black';
+          case 'movies': return 'bg-green-600 border-green-400';
           case 'series': return 'bg-orange-600 border-orange-400';
           default: return 'bg-gray-600 border-gray-400';
       }
   };
 
-  // Skeleton im Kartenmaß (aspect + Grid wie echte Cards → kein CLS beim Laden)
+  /** Aktualisiert die Ränder-Zustände (Pfeile) am echten Scroll-Zustand. */
+  const updateEdgeState = () => {
+    const el = trackRef.current;
+    if (!el) return;
+    setCanPrev(el.scrollLeft > 4);
+    setCanNext(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  };
+
+  // Ränder nach Ladefortschritt, Scroll und Resize nachziehen.
+  useEffect(() => {
+    updateEdgeState();
+    const el = trackRef.current;
+    if (!el) return;
+    el.addEventListener('scroll', updateEdgeState, { passive: true });
+    window.addEventListener('resize', updateEdgeState);
+    return () => {
+      el.removeEventListener('scroll', updateEdgeState);
+      window.removeEventListener('resize', updateEdgeState);
+    };
+  }, [loading, posts.length]);
+
+  // Mausrad: vertikales Wheel wird horizontal konsumiert (Desktop-Carousel-Gefühl),
+  // nur solange der Track noch Luft hat — sonst scrollt die Seite normal weiter.
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+      const max = el.scrollWidth - el.clientWidth;
+      if (max <= 0) return;
+      const atStart = el.scrollLeft <= 4;
+      const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4;
+      const consumes = (e.deltaY > 0 && !atEnd) || (e.deltaY < 0 && !atStart);
+      if (!consumes) return;
+      e.preventDefault();
+      el.scrollLeft += e.deltaY;
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
+  /** Scrollt um ~2 Karten (Richtung: -1 zurück, +1 vor). */
+  const scrollByCards = (dir: 1 | -1) => {
+    const el = trackRef.current;
+    if (!el) return;
+    // SectorCard rendert einen `<a>` — Kartenbreite daraus ableiten.
+    const card = el.querySelector<HTMLElement>('a');
+    const step = (card?.offsetWidth ?? FALLBACK_STEP) * 2;
+    el.scrollBy({ left: dir * step, behavior: 'smooth' });
+  };
+
+  // Skeleton im Kartenmaß (gleiche Streifen-Höhe → kein CLS beim Laden).
   if (loading) return (
     <div className="w-full" aria-hidden="true">
-      <div className="flex overflow-x-auto lg:grid lg:grid-cols-5 gap-4 pb-4 lg:pb-0">
+      <div className="flex overflow-x-auto scrollbar-hide gap-4 pb-4">
         {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="flex-shrink-0 w-[240px] lg:w-full aspect-[2/3] rounded-xl border-2 border-black bg-white p-1.5">
+          <div key={i} className="flex-shrink-0 w-[240px] md:w-[260px] aspect-[2/3] rounded-xl border-2 border-black bg-white p-1.5">
             <div className="w-full h-full rounded-lg bg-neutral-900 animate-pulse"></div>
           </div>
         ))}
@@ -80,9 +142,36 @@ export const LatestPosts: React.FC = () => {
   return (
     <div className="w-full">
         <PostItemListSchema posts={posts} name={t.home.hero.latestTitle} />
-        {/* Mobile: Horizontal Scroll | Desktop: Grid */}
         <ScrollReveal>
-        <div className="flex overflow-x-auto lg:grid lg:grid-cols-5 gap-4 pb-4 lg:pb-0 snap-x snap-mandatory scrollbar-hide">
+        {/* Pfeil-Steuerung (im Spiel-Stil, eigene SVG-Glyphen) */}
+        <div className="flex items-center justify-end gap-3 mb-4">
+            <button
+              type="button"
+              onClick={() => scrollByCards(-1)}
+              disabled={!canPrev}
+              aria-label={t.home.hero.carouselPrev}
+              className="h-11 w-11 rounded-full border-2 border-neutral-700 bg-black text-neutral-300 transition-colors hover:border-red-500 hover:text-red-400 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center"
+            >
+              <Icon name="arrow-left" size={20} />
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollByCards(1)}
+              disabled={!canNext}
+              aria-label={t.home.hero.carouselNext}
+              className="h-11 w-11 rounded-full border-2 border-neutral-700 bg-black text-neutral-300 transition-colors hover:border-red-500 hover:text-red-400 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center"
+            >
+              <Icon name="arrow-right" size={20} />
+            </button>
+        </div>
+
+        {/* Horizontale Snap-Leiste (kein Vertikal-Wachstum mehr) */}
+        <div
+          ref={trackRef}
+          role="region"
+          aria-label={t.home.hero.latestTitle}
+          className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory gap-4 pb-4"
+        >
             {posts.map((post, i) => {
                 const displayTitle = (language === 'en' && post.titleEn) ? post.titleEn : post.title;
                 const isScheduled = post.publishedAt?.seconds > Timestamp.now().seconds;
@@ -94,7 +183,7 @@ export const LatestPosts: React.FC = () => {
                         accent={categoryAccent(post.category)}
                         tilt={i % 2 === 0 ? -1 : 1}
                         dimmed={isScheduled}
-                        className="relative flex-shrink-0 w-[240px] lg:w-full aspect-[2/3] snap-start"
+                        className={CARD_CLASS}
                     >
                         <div className="relative w-full h-full overflow-hidden rounded-lg bg-black">
                         {/* Background Image */}

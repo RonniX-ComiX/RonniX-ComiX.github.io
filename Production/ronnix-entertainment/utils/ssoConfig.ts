@@ -93,7 +93,7 @@ export const SSO_CONFIG: SsoConfig = {
   // (Firebase: "that's just how long you have to use that token to authenticate").
   // 30 Min Cache = Klick trifft fast immer, Rest-Gültigkeit 30 Min für signIn.
   tokenCacheMs: 1_800_000, // (0..3000000)
-  authCrossfadeMs: 180, // (0..400; 0 = instant, Reduced-Motion erzwingt 0)
+  authCrossfadeMs: 180, // (0..400; 0 = instant)
   useFragmentTransport: true, // (bool)
   enableSilentCheck: true, // (bool)
   checkedKey: 'ronnix_sso_checked', // (string, stabil halten: Tabs im Feld nutzen alten Key)

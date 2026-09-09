@@ -6,13 +6,13 @@
  * ("TARGET SECTOR — RONNIXCOMIX.DE") + Phasenanzeige an echtem State
  * (`preparing → transfer → docking → error`, kein Fake-Fortschritt).
  * System-Fonts only (Arial Black/Impact-Fallback): kein Webfont-Download, kein FOUT
- * auf frischer Origin. Nur transform/opacity-Animationen (GPU), `prefers-reduced-motion`
- * → statisch. Use Cases: jede sichtbare Domain-Weiterleitung. Benutzung:
+ * auf frischer Origin. Nur transform/opacity-Animationen (GPU).
+ * Use Cases: jede sichtbare Domain-Weiterleitung. Benutzung:
  * `<WarpScreen phase="transfer" targetLabel="RONNIXCOMIX.DE" />`
  * Gehört NICHT hierher: Routing/Token-Logik, Seitenübergänge (View Transitions).
  */
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { SSO_CONFIG } from '../utils/ssoConfig';
 
 /** Sichtbare Phasen des Sprungs, an echten Async-State gekoppelt. */
@@ -51,7 +51,7 @@ const PHASE_INDEX: Record<Exclude<WarpPhase, 'error'>, number> = {
  * Comic-Warp-Ring (Inline-SVG im Spiel-Stil, keine Icon-Lib nötig).
  */
 const WarpRing: React.FC = () => (
-  <svg viewBox="0 0 120 120" className="warp-animated h-20 w-20" role="img" aria-label="Warp aktiv" style={{ animation: 'warp-ring-rotate 2.4s linear infinite' }}>
+  <svg viewBox="0 0 120 120" className="h-20 w-20" role="img" aria-label="Warp aktiv" style={{ animation: 'warp-ring-rotate 2.4s linear infinite' }}>
     <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="3" />
     <circle
       cx="60" cy="60" r="54" fill="none" stroke="#dc2626" strokeWidth="3"
@@ -78,21 +78,11 @@ export const WarpScreen: React.FC<WarpScreenProps> = ({
   error = null,
   label = 'Domain-Wechsel läuft',
 }) => {
-  const [reduceMotion, setReduceMotion] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-  );
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const onChange = (e: MediaQueryListEvent) => setReduceMotion(e.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
-
   const effectivePhase: WarpPhase = error ? 'error' : phase;
   const isError = effectivePhase === 'error';
   const activeStep = isError ? -1 : PHASE_INDEX[effectivePhase];
   const statusText = error ?? message ?? PHASE_TEXT[effectivePhase as Exclude<WarpPhase, 'error'>];
-  const crossfadeMs = reduceMotion ? 0 : SSO_CONFIG.authCrossfadeMs;
+  const crossfadeMs = SSO_CONFIG.authCrossfadeMs;
 
   return (
     <div
@@ -102,14 +92,6 @@ export const WarpScreen: React.FC<WarpScreenProps> = ({
       style={{ minHeight: '100dvh' }}
     >
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-900/20 via-black to-black opacity-80" />
-
-      {/* Speed-Linien (GPU: nur transform/opacity) */}
-      {!reduceMotion && (
-        <div className="absolute inset-0 overflow-hidden opacity-30" aria-hidden="true">
-          <div className="warp-animated absolute left-1/2 top-1/2 h-[2px] w-[200vw] -translate-x-1/2 -translate-y-1/2 rotate-45 bg-white" style={{ animation: 'warp-streak-pulse 1.6s ease-in-out infinite' }} />
-          <div className="warp-animated absolute left-1/2 top-1/2 h-[2px] w-[200vw] -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-red-500" style={{ animation: 'warp-streak-pulse 1.6s ease-in-out 0.2s infinite' }} />
-        </div>
-      )}
 
       <div className="relative z-10 flex flex-col items-center gap-5 px-6 text-center">
         {isError ? (
@@ -150,7 +132,7 @@ export const WarpScreen: React.FC<WarpScreenProps> = ({
                 key={step}
                 className={`h-1.5 rounded-full transition ${step <= activeStep ? 'bg-red-600' : 'bg-neutral-800'}`}
                 style={{
-                  width: step === activeStep && !reduceMotion ? 34 : 18,
+                  width: step === activeStep ? 34 : 18,
                   transitionDuration: `${crossfadeMs}ms`,
                   opacity: step < activeStep ? 0.55 : 1,
                 }}

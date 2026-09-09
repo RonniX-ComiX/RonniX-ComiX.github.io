@@ -3,16 +3,20 @@
  *
  * Feature: lädt Posts je Kategorie (`latest` = alle, Limit je Aufruf),
  * filtert Scheduled für Gäste heraus, Admins sehen alles. Cache-Fenster und
- * Key-Prefix kommen aus `utils/appConfig.ts` (§4). Benutzung:
- * `useCachedPosts('comics')` in Sections. Gehört NICHT hierher: Rendering
- * (Sections), Einzel-Post (`pages/PostDetail.tsx`).
+ * Key-Prefix kommen aus `utils/appConfig.ts` (§4); Keys tragen zusätzlich die
+ * Build-ID (`versionedCacheKey`) — nach jedem Release verfallen alte
+ * Generationen automatisch, beim Start wird genau einmal gepurgt (keine
+ * veralteten Inhalte nach Domain-Wechsel/Refresh). User-Daten und Präferenzen
+ * (Drafts, Sprache, SSO-Hints) sind davon ausgenommen und überleben Releases.
+ * Benutzung: `useCachedPosts('comics')` in Sections. Gehört NICHT hierher:
+ * Rendering (Sections), Einzel-Post (`pages/PostDetail.tsx`).
  */
 
 import { useState, useEffect } from 'react';
 import { collection, query, where, orderBy, getDocs, Timestamp, limit, QueryConstraint } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
-import { CACHE_DURATION_MS, CACHE_KEY_PREFIX } from '../utils/appConfig';
+import { CACHE_DURATION_MS, CACHE_KEY_PREFIX, CACHE_NAMESPACE, versionedCacheKey } from '../utils/appConfig';
 import { logError } from '../utils/logger';
 
 // In-Memory + localStorage Persist (SWR: sofort Cache, dann Revalidate)
@@ -20,13 +24,37 @@ const memCache: Record<string, { data: any[], timestamp: number }> = {};
 const CACHE_DURATION = CACHE_DURATION_MS;
 
 /**
+ * Löscht Cache-Einträge älterer Build-Generationen (einmal je Page-Load).
+ * Entfernt nur Keys mit `CACHE_KEY_PREFIX`, die NICHT den aktuellen
+ * `CACHE_NAMESPACE` tragen — Drafts, Sprache und SSO-Keys bleiben unangetastet.
+ */
+function purgeStaleCacheGenerations(): void {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    const currentPrefix = `${CACHE_KEY_PREFIX}${CACHE_NAMESPACE}_`;
+    const stale: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (k && k.startsWith(CACHE_KEY_PREFIX) && !k.startsWith(currentPrefix)) stale.push(k);
+    }
+    stale.forEach((k) => window.localStorage.removeItem(k));
+  } catch {
+    /* Private Mode o. Ä.: still weiter ohne Purge */
+  }
+}
+
+// Modul-Init: genau einmal pro Page-Load (Import läuft vor erstem Hook-Aufruf).
+purgeStaleCacheGenerations();
+
+/**
  * Liest einen Cache-Eintrag aus localStorage (nur innerhalb `CACHE_DURATION_MS` gültig).
- * @param key Cache-Schlüssel ohne Prefix.
+ * Der Key wird automatisch mit der Build-ID versioniert (Release-scharf).
+ * @param key Fachlicher Schlüssel ohne Prefix/Namespace.
  * @returns Geparste Daten oder `null` (fehlt/alt/kaputt).
  */
 const readPersisted = (key: string) => {
   try {
-    const raw = localStorage.getItem(`${CACHE_KEY_PREFIX}${key}`);
+    const raw = localStorage.getItem(versionedCacheKey(key));
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (Date.now() - parsed.timestamp < CACHE_DURATION) return parsed.data;
@@ -35,12 +63,13 @@ const readPersisted = (key: string) => {
 };
 /**
  * Schreibt einen Cache-Eintrag mit Zeitstempel nach localStorage (still bei Quota-Fehlern).
- * @param key Cache-Schlüssel ohne Prefix.
+ * Der Key wird automatisch mit der Build-ID versioniert (Release-scharf).
+ * @param key Fachlicher Schlüssel ohne Prefix/Namespace.
  * @param data Zu persistierende Post-Liste.
  */
 const writePersisted = (key: string, data: any[]) => {
   try {
-    localStorage.setItem(`${CACHE_KEY_PREFIX}${key}`, JSON.stringify({ data, timestamp: Date.now() }));
+    localStorage.setItem(versionedCacheKey(key), JSON.stringify({ data, timestamp: Date.now() }));
   } catch {}
 };
 

@@ -37,8 +37,8 @@ export const QuickNav: React.FC = () => {
     { text: t.home.hero.btnNews, href: '/news', icon: 'newspaper', color: 'text-pink-400 border-pink-500/30 hover:bg-pink-900/20' },
     { text: t.home.hero.btnComics, href: '/comix', icon: 'palette', color: 'text-red-400 border-red-500/30 hover:bg-red-900/20' },
     { text: t.home.hero.btnBoox, href: '/boox', icon: 'book-open', color: 'text-blue-400 border-blue-500/30 hover:bg-blue-900/20' },
-    { text: t.home.hero.btnGamez, href: '/gamez', icon: 'gamepad', color: 'text-green-400 border-green-500/30 hover:bg-green-900/20' },
-    { text: t.home.hero.btnMoviez, href: '/moviez', icon: 'film', color: 'text-yellow-400 border-yellow-500/30 hover:bg-yellow-900/20' },
+    { text: t.home.hero.btnGamez, href: '/gamez', icon: 'gamepad', color: 'text-teal-300 border-teal-500/30 hover:bg-teal-900/20' },
+    { text: t.home.hero.btnMoviez, href: '/moviez', icon: 'film', color: 'text-green-400 border-green-500/30 hover:bg-green-900/20' },
     { text: t.home.hero.btnSeriez, href: '/seriez', icon: 'tv', color: 'text-orange-400 border-orange-500/30 hover:bg-orange-900/20' },
     { text: t.home.hero.btnContact, href: '/contact', icon: 'mail', color: 'text-gray-300 border-gray-500/30 hover:bg-gray-800' },
   ];

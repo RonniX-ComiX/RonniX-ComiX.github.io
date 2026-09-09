@@ -12,6 +12,7 @@ import { Link } from 'react-router-dom';
 import { Icon, type IconName } from './icons/Icon';
 import { useLanguage } from '../context/LanguageContext';
 import { localizePath } from '../utils/domainConfig';
+import { versionedAssetUrl } from '../utils/appConfig';
 
 export const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -38,7 +39,7 @@ export const Footer: React.FC = () => {
                {/* Neutraler Logo-Glow (Farb-Disziplin) */}
                <div className="absolute inset-0 bg-white blur-2xl opacity-20 rounded-full animate-pulse"></div>
                <img
-                 src="./images/ronnix_logo.png"
+                  src={versionedAssetUrl('/images/ronnix_logo.png')}
                  alt="RonniX Entertainment Logo"
                  loading="lazy"
                  decoding="async"

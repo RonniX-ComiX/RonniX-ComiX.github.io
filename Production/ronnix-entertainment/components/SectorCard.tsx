@@ -15,13 +15,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-export type SectorAccent = 'pink' | 'red' | 'blue' | 'green' | 'yellow' | 'orange';
+export type SectorAccent = 'pink' | 'red' | 'blue' | 'green' | 'teal' | 'yellow' | 'orange';
 
 const ACCENT_SHADOW: Record<SectorAccent, string> = {
   pink: 'hover:shadow-[5px_5px_0_rgba(236,72,153,1)]',
   red: 'hover:shadow-[5px_5px_0_rgba(220,38,38,1)]',
   blue: 'hover:shadow-[5px_5px_0_rgba(59,130,246,1)]',
   green: 'hover:shadow-[5px_5px_0_rgba(34,197,94,1)]',
+  teal: 'hover:shadow-[5px_5px_0_rgba(45,212,191,1)]',
   yellow: 'hover:shadow-[5px_5px_0_rgba(250,204,21,1)]',
   orange: 'hover:shadow-[5px_5px_0_rgba(249,115,22,1)]',
 };
@@ -35,8 +36,8 @@ export const categoryAccent = (cat?: string): SectorAccent => {
     case 'news': return 'pink';
     case 'comics': return 'red';
     case 'books': return 'blue';
-    case 'games': return 'green';
-    case 'movies': return 'yellow';
+    case 'games': return 'teal';
+    case 'movies': return 'green';
     case 'series': return 'orange';
     default: return 'red';
   }

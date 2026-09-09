@@ -14,6 +14,8 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { EditorToolbar } from './editor/EditorToolbar';
 import { EditorModals } from './editor/EditorModals';
+import { sanitizeEditorInput } from '../utils/richTextSanitize';
+import { logError } from '../utils/logger';
 
 interface RichTextEditorProps {
   value: string;
@@ -51,13 +53,17 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
 
   const [currentFontSize, setCurrentFontSize] = useState('3');
 
-  // Initialize content (bewusst nur einmal: sonst würde jeder Keystroke den DOM-Inhalt resetten)
+  // Initialize content (einmal + bei Sprach-Tab-Wechsel via `id`: Edit-Mode lädt async nach).
   useEffect(() => {
-    if (editorRef.current && value && editorRef.current.innerHTML === '') {
-      editorRef.current.innerHTML = value;
+    if (editorRef.current && value && editorRef.current.innerHTML !== value) {
+      // Nur setzen, wenn der User gerade nicht tippt (Fokus + dirty guard gegen Cursor-Sprünge).
+      const active = document.activeElement === editorRef.current;
+      if (!active || editorRef.current.innerHTML === '') {
+        editorRef.current.innerHTML = value;
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
+  }, [id]);
 
   // --- SELECTION HANDLING ---
 
@@ -120,6 +126,30 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
     }
   };
 
+  /**
+   * Paste-Härtung: HTML wird sanitized (keine Scripts/Styles/Event-Handler),
+   * Plain-Text fällt auf `insertText` zurück. Verhindert Word-Müll + XSS.
+   */
+  const handlePaste = async (e: React.ClipboardEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    try {
+      const html = e.clipboardData.getData('text/html');
+      const text = e.clipboardData.getData('text/plain');
+      if (html) {
+        const clean = await sanitizeEditorInput(html);
+        document.execCommand('insertHTML', false, clean);
+      } else if (text) {
+        document.execCommand('insertText', false, text.slice(0, 20000));
+      }
+      checkFormats();
+      handleInput();
+    } catch (err) {
+      logError('rich-text-editor', 'paste sanitize failed', err);
+      const fallback = e.clipboardData.getData('text/plain');
+      if (fallback) document.execCommand('insertText', false, fallback.slice(0, 20000));
+    }
+  };
+
   // --- MODAL HANDLERS ---
 
   const openModal = (type: 'link' | 'image' | 'video') => {
@@ -155,19 +185,20 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
 
       {/* --- EDITOR AREA (WYSIWYG) --- */}
       <div className="relative min-h-[500px] bg-black">
-           <div
-                ref={editorRef}
-                id={id}
-                contentEditable
-                role="textbox"
-                aria-multiline="true"
-                aria-label={placeholder || t.home.editor.placeholder}
-                onInput={handleInput}
-                onKeyUp={checkFormats}
-                onMouseUp={checkFormats}
-                className="editor-content p-8 min-h-[500px] text-gray-200"
-                data-placeholder={placeholder || t.home.editor.placeholder}
-            />
+            <div
+                 ref={editorRef}
+                 id={id}
+                 contentEditable
+                 role="textbox"
+                 aria-multiline="true"
+                 aria-label={placeholder || t.home.editor.placeholder}
+                 onInput={handleInput}
+                 onPaste={handlePaste}
+                 onKeyUp={checkFormats}
+                 onMouseUp={checkFormats}
+                 className="editor-content p-8 min-h-[500px] text-gray-200"
+                 data-placeholder={placeholder || t.home.editor.placeholder}
+             />
       </div>
 
       {/* --- MODALS --- */}

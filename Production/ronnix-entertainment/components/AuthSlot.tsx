@@ -4,8 +4,8 @@
  * Feature: zeigt `placeholder` (während Laden) oder `children` (entschieden) in einer
  * Box, die IMMER die maximale Größe beider Zustände einnimmt (Grid-Stapel, kein
  * Layout-Shift/CLS). Zustandswechsel (Gast↔User, z. B. Silent-Login mitten auf der
- * Seite) laufen als Opazitäts-Crossfade (`SSO_CONFIG.authCrossfadeMs`); bei
- * `prefers-reduced-motion` instant in derselben Box. Use Cases: Navbar-Auth-Button
+ * Seite) laufen als Opazitäts-Crossfade (`SSO_CONFIG.authCrossfadeMs`).
+ * Use Cases: Navbar-Auth-Button
  * (Desktop/Mobil). Benutzung:
  * `<AuthSlot slotKey={...} loading={...} placeholder={...}>...</AuthSlot>`
  * Gehört NICHT hierher: Auth-Logik selbst (`context/AuthContext.tsx`).
@@ -30,22 +30,6 @@ interface AuthSlotProps {
 }
 
 /**
- * True, wenn der Nutzer reduzierte Bewegung wünscht (dann kein Crossfade).
- */
-function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-  );
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const onChange = (e: MediaQueryListEvent) => setReduced(e.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
-  return reduced;
-}
-
-/**
  * Sprungfreier Auth-Slot mit Crossfade zwischen Zuständen.
  * @param slotKey Stabiler Zustandsschlüssel, siehe Props.
  * @param loading Ob Auth noch klärt.
@@ -59,8 +43,7 @@ export const AuthSlot: React.FC<AuthSlotProps> = ({
   label,
   className,
 }) => {
-  const reduceMotion = usePrefersReducedMotion();
-  const dur = reduceMotion ? 0 : SSO_CONFIG.authCrossfadeMs;
+  const dur = SSO_CONFIG.authCrossfadeMs;
 
   const [rendered, setRendered] = useState<ReactNode>(loading ? placeholder : children);
   const [previous, setPrevious] = useState<ReactNode>(null);

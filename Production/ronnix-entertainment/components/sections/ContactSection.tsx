@@ -24,7 +24,7 @@ export const ContactSection: React.FC = () => {
 
   return (
     <section>
-      <SectionTitle title={t.home.contact.title} eyebrow="OPEN CHANNEL" />
+      <SectionTitle title={t.home.contact.title} />
       
       <p className="text-center mt-4 mb-8 text-gray-400 max-w-lg mx-auto">
         {t.home.contact.subtitle}

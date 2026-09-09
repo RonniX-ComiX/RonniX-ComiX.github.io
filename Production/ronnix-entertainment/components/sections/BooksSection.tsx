@@ -17,6 +17,8 @@ import { localizePath } from '../../utils/domainConfig';
 import { PostItemListSchema } from '../PostItemListSchema';
 import { ScrollReveal } from '../ScrollReveal';
 import { SectorCard } from '../SectorCard';
+import { AdminCreateButton } from '../post/AdminCreateButton';
+import { getExcerpt as getSharedExcerpt } from '../../utils/postExcerpt';
 
 export const BooksSection: React.FC = () => {
   const { t, language } = useLanguage();
@@ -32,16 +34,13 @@ export const BooksSection: React.FC = () => {
       }).format(date);
   };
 
-  // Helper to strip HTML for excerpt
-  const getExcerpt = (html: string) => {
-      const tmp = document.createElement('DIV');
-      tmp.innerHTML = html;
-      return tmp.textContent?.substring(0, 150) + '...' || '';
-  };
+  // Helper to strip HTML for excerpt (SSG-sicher, Wortgrenze)
+  const getExcerpt = (html: string) => getSharedExcerpt(html, 150);
 
   return (
     <section className="min-h-[50vh]">
-      <SectionTitle title={t.home.books.title} eyebrow="PAGE SECTOR" />
+      <SectionTitle title={t.home.books.title} />
+      <AdminCreateButton category="books" />
       <PostItemListSchema posts={posts} name={t.home.books.title} />
       
       {loading ? (
@@ -101,9 +100,9 @@ export const BooksSection: React.FC = () => {
                     </div>
 
                     <div>
-                        <div className="flex items-start justify-between mb-2">
+                         <div className="flex items-start justify-between mb-2">
                              <span className="text-xs font-bold uppercase tracking-widest text-gray-500 bg-neutral-800 px-2 py-1 rounded">
-                                {t.home.admin.themes[book.theme as keyof typeof t.home.admin.themes] || book.theme || 'Review'}
+                                {t.home.admin.themes[((book.themes?.[0] || book.theme) as keyof typeof t.home.admin.themes)] || book.themes?.[0] || book.theme || 'Review'}
                              </span>
                         </div>
                         {/* Changed font-retro to font-serif for book feel */}

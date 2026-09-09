@@ -10,8 +10,10 @@
  * Meta-Felder (`post/PostMetaFields.tsx`), Artikel-Ansicht (`PostDetail.tsx`).
  */
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { POST_CATEGORIES, COVER_FALLBACK, MAX_THEMES_PER_POST } from '../../utils/appConfig';
+import { parseCoverArtists, serializeCoverArtists } from '../../utils/postTypes';
 import { setDoc, serverTimestamp, doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { SectionTitle } from '../SectionTitle';
@@ -19,14 +21,16 @@ import { RichTextEditor } from '../RichTextEditor';
 import { PostMetaFields } from '../post/PostMetaFields';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { postCategoryToRoute, localizePath } from '../../utils/domainConfig';
 import { Icon } from '../icons/Icon';
 import { logError } from '../../utils/logger';
 
 export const CreatePost: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>(); // Get ID if in edit mode
+  const [searchParams] = useSearchParams();
   const { currentUser, isAdmin } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   
   // Tab State
   const [activeTab, setActiveTab] = useState<'de' | 'en'>('de');
@@ -42,15 +46,33 @@ export const CreatePost: React.FC = () => {
   // Common Metadata
   const [coverUrl, setCoverUrl] = useState('');
   const [category, setCategory] = useState('comics');
-  const [theme, setTheme] = useState('review'); // Default theme
+  const [theme, setTheme] = useState('review'); // Legacy-Einzelwert (Fallback, wird zu themes[0] gespiegelt)
+  const [themes, setThemes] = useState<string[]>(['review']);
   const [scheduledDate, setScheduledDate] = useState('');
 
   // Extended Metadata (Comics/Books/Games/Movies/Series)
-  const [itemAuthor, setItemAuthor] = useState(''); // The author of the book/comic
-  const [publisher, setPublisher] = useState(''); // Publisher for Books/Comics/Games
+  const [itemAuthor, setItemAuthor] = useState(''); // Legacy (migriert zu credits.author)
+  const [publisher, setPublisher] = useState(''); // Legacy (migriert zu publisherDe)
   const [developer, setDeveloper] = useState(''); // For games
   const [pageCount, setPageCount] = useState('');
-  const [releaseYear, setReleaseYear] = useState('');
+  const [releaseYear, setReleaseYear] = useState(''); // Legacy (migriert zu releaseYearDe)
+
+  // Credits (getrennt, alle optional — leere werden nicht angezeigt)
+  const [executiveEditor, setExecutiveEditor] = useState('');
+  const [coverArtistsRaw, setCoverArtistsRaw] = useState('');
+  const [creditAuthor, setCreditAuthor] = useState('');
+  const [creditArtist, setCreditArtist] = useState('');
+  const [creditInker, setCreditInker] = useState('');
+  const [creditColorist, setCreditColorist] = useState('');
+  const [creditLetterer, setCreditLetterer] = useState('');
+  const [creditEditor, setCreditEditor] = useState('');
+
+  // Herkunft (DE vs. Original)
+  const [releaseYearDe, setReleaseYearDe] = useState('');
+  const [releaseYearOriginal, setReleaseYearOriginal] = useState('');
+  const [originCountry, setOriginCountry] = useState('');
+  const [publisherDe, setPublisherDe] = useState('');
+  const [publisherOriginal, setPublisherOriginal] = useState('');
   
   // Movie & Series Specific Metadata
   const [director, setDirector] = useState('');
@@ -68,6 +90,22 @@ export const CreatePost: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(!!id); // Loading state for fetching edit data
   const [error, setError] = useState('');
+
+  // Fehlertexte via Ref: stabile Deps (nur id/isAdmin) → kein Refetch des
+  // Formulars bei Sprachwechsel (sonst ungespeicherte Eingaben verloren).
+  const errorDoc404Ref = useRef(t.home.admin.errorDoc404);
+  const errorLoadRef = useRef(t.home.admin.errorLoad);
+  errorDoc404Ref.current = t.home.admin.errorDoc404;
+  errorLoadRef.current = t.home.admin.errorLoad;
+
+  // Kategorie-Prefill via `?category=` (nur neue Posts, nur erlaubte Werte).
+  useEffect(() => {
+    if (id) return;
+    const requested = searchParams.get('category') || '';
+    if ((POST_CATEGORIES as readonly string[]).includes(requested)) {
+      setCategory(requested);
+    }
+  }, [id, searchParams]);
 
   // Fetch data if editing (oberhalb des Early-Returns: stabile Hooks-Reihenfolge;
   // `isAdmin`-Guard im Effekt erhält das alte Verhalten — kein Fetch für Gäste).
@@ -91,14 +129,31 @@ export const CreatePost: React.FC = () => {
                     // Metadata
                     setCoverUrl(data.coverUrl);
                     setCategory(data.category);
-                    setTheme(data.theme || 'review');
+                    const loadedThemes = Array.isArray(data.themes) && data.themes.length > 0
+                      ? data.themes.filter(Boolean).slice(0, MAX_THEMES_PER_POST)
+                      : [data.theme || 'review'];
+                    setThemes(loadedThemes);
+                    setTheme(loadedThemes[0] || 'review');
 
-                    // Extended Metadata
+                    // Extended Metadata (inkl. Legacy-Fallbacks)
                     setItemAuthor(data.itemAuthor || '');
                     setPublisher(data.publisher || '');
                     setDeveloper(data.developer || '');
                     setPageCount(data.pageCount || '');
                     setReleaseYear(data.releaseYear || '');
+                    setExecutiveEditor(data.executiveEditor || '');
+                    setCoverArtistsRaw(serializeCoverArtists(data.coverArtists) || (typeof data.coverArtists === 'string' ? data.coverArtists : ''));
+                    setCreditAuthor(data.author || data.itemAuthor || '');
+                    setCreditArtist(data.artist || '');
+                    setCreditInker(data.inker || '');
+                    setCreditColorist(data.colorist || '');
+                    setCreditLetterer(data.letterer || '');
+                    setCreditEditor(data.editor || '');
+                    setReleaseYearDe(data.releaseYearDe || data.releaseYear || '');
+                    setReleaseYearOriginal(data.releaseYearOriginal || '');
+                    setOriginCountry(data.originCountry || '');
+                    setPublisherDe(data.publisherDe || data.publisher || '');
+                    setPublisherOriginal(data.publisherOriginal || '');
 
                     // Movie & Series Metadata
                     setDirector(data.director || '');
@@ -122,18 +177,18 @@ export const CreatePost: React.FC = () => {
                         setScheduledDate(isoString);
                     }
                 } else {
-                    setError(t.home.admin.errorDoc404);
+                    setError(errorDoc404Ref.current);
                 }
             } catch (err) {
                 logError('create-post',"Error fetching doc:", err);
-                setError(t.home.admin.errorLoad);
+                setError(errorLoadRef.current);
             } finally {
                 setIsLoading(false);
             }
         };
         fetchPost();
     }
-  }, [id, isAdmin, t.home.admin.errorDoc404, t.home.admin.errorLoad]);
+  }, [id, isAdmin]);
 
   // Strict Access Control
   if (!currentUser || !isAdmin) {
@@ -183,21 +238,39 @@ export const CreatePost: React.FC = () => {
           publishedAt = Timestamp.fromDate(new Date(scheduledDate));
       }
 
-      // Base Data object
+      // Base Data object (neu: themes[], credits, origin — alt-Felder als Fallback mitgeschrieben)
+      const coverArtists = parseCoverArtists(coverArtistsRaw);
+      const effThemes = (themes.length > 0 ? themes : [theme || 'review']).slice(0, MAX_THEMES_PER_POST);
       const postData = {
           title,
           content,
           titleEn: titleEn || '', // Optional
           contentEn: contentEn || '', // Optional
-          coverUrl: coverUrl || 'https://placehold.co/600x400/1a1a1a/dc2626?text=No+Cover',
+          coverUrl: coverUrl || COVER_FALLBACK,
           category,
-          theme,
-          // Extended Metadata
-          itemAuthor,
-          publisher,
+          theme: effThemes[0] || 'review',
+          themes: effThemes,
+          // Extended Metadata (Legacy-Fallbacks bleiben für alte Clients lesbar)
+          itemAuthor: creditAuthor || itemAuthor,
+          publisher: publisherDe || publisher,
           developer,
           pageCount,
-          releaseYear,
+          releaseYear: releaseYearDe || releaseYear,
+          // Credits (getrennt, optional)
+          executiveEditor: executiveEditor.trim(),
+          coverArtists,
+          author: creditAuthor.trim(),
+          artist: creditArtist.trim(),
+          inker: creditInker.trim(),
+          colorist: creditColorist.trim(),
+          letterer: creditLetterer.trim(),
+          editor: creditEditor.trim(),
+          // Herkunft (DE vs. Original)
+          releaseYearDe: (releaseYearDe || releaseYear).trim(),
+          releaseYearOriginal: releaseYearOriginal.trim(),
+          originCountry: originCountry.trim(),
+          publisherDe: (publisherDe || publisher).trim(),
+          publisherOriginal: publisherOriginal.trim(),
           // Movie & Series Metadata
           director,
           producer,
@@ -233,7 +306,9 @@ export const CreatePost: React.FC = () => {
         await setDoc(docRef, newPostData);
       }
       
-      navigate(`/${category}`);
+      // Sprach-erhaltend zurück (DE pfadrein, EN mit Prefix) — Ziel ist die
+      // Sektions-Route (`/boox`, `/comix`, …) statt der Firestore-Kategorie.
+      navigate(localizePath(postCategoryToRoute(category), language));
     } catch (err: any) {
       logError('create-post',"Error saving document: ", err);
       if (err.code === 'permission-denied') {
@@ -371,12 +446,10 @@ export const CreatePost: React.FC = () => {
                 setCategory={setCategory}
                 theme={theme}
                 setTheme={setTheme}
-                itemAuthor={itemAuthor}
-                setItemAuthor={setItemAuthor}
+                themes={themes}
+                setThemes={setThemes}
                 developer={developer}
                 setDeveloper={setDeveloper}
-                publisher={publisher}
-                setPublisher={setPublisher}
                 director={director}
                 setDirector={setDirector}
                 producer={producer}
@@ -397,8 +470,32 @@ export const CreatePost: React.FC = () => {
                 setProductionYears={setProductionYears}
                 pageCount={pageCount}
                 setPageCount={setPageCount}
-                releaseYear={releaseYear}
-                setReleaseYear={setReleaseYear}
+                executiveEditor={executiveEditor}
+                setExecutiveEditor={setExecutiveEditor}
+                coverArtistsRaw={coverArtistsRaw}
+                setCoverArtistsRaw={setCoverArtistsRaw}
+                creditAuthor={creditAuthor}
+                setCreditAuthor={setCreditAuthor}
+                creditArtist={creditArtist}
+                setCreditArtist={setCreditArtist}
+                creditInker={creditInker}
+                setCreditInker={setCreditInker}
+                creditColorist={creditColorist}
+                setCreditColorist={setCreditColorist}
+                creditLetterer={creditLetterer}
+                setCreditLetterer={setCreditLetterer}
+                creditEditor={creditEditor}
+                setCreditEditor={setCreditEditor}
+                releaseYearDe={releaseYearDe}
+                setReleaseYearDe={setReleaseYearDe}
+                releaseYearOriginal={releaseYearOriginal}
+                setReleaseYearOriginal={setReleaseYearOriginal}
+                originCountry={originCountry}
+                setOriginCountry={setOriginCountry}
+                publisherDe={publisherDe}
+                setPublisherDe={setPublisherDe}
+                publisherOriginal={publisherOriginal}
+                setPublisherOriginal={setPublisherOriginal}
             />
 
             <div className="flex justify-between pt-4">

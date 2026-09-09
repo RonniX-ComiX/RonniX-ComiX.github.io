@@ -77,7 +77,7 @@ export default tseslint.config(
   },
   {
     name: 'ronnix/node-config',
-    files: ['eslint.config.js', 'postcss.config.js', 'tailwind.config.js'],
+    files: ['eslint.config.js', 'postcss.config.js', 'tailwind.config.js', 'scripts/**/*.mjs'],
     languageOptions: {
       sourceType: 'commonjs',
       globals: {

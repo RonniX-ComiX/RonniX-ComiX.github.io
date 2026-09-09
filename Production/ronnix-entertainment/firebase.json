@@ -59,6 +59,14 @@
     ],
     "headers": [
       {
+        "source": "/",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
+      },
+      {
+        "source": "**/!(*.*)",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
+      },
+      {
         "source": "/sitemap.xml",
         "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600, s-maxage=7200" }]
       },

@@ -2,9 +2,7 @@
  * ScrollReveal.tsx — Scroll-getriebene Eintritts-Inszenierung (Single Source).
  *
  * Feature: blendet Kinder per IntersectionObserver ein (einmalig, Fade-Up +
- * Ent-Blurren, 700 ms Spiel-Kurve) statt statischem Erscheinen. Unterm
- * Reduced-Motion-Setting passiert nichts (Inhalt sofort sichtbar — die
- * Hidden-Klassen existieren nur unter `motion-safe:`). Benutzung:
+ * Ent-Blurren, 700 ms Spiel-Kurve) statt statischem Erscheinen. Benutzung:
  * `<ScrollReveal delay={100}>…</ScrollReveal>` um Sektions-Grids.
  * Gehört NICHT hierher: `window.scroll`-Listener (verboten — IO statt
  * Reflow-Loops), Hero-Intro (Session-Flag in `Hero.tsx`).
@@ -54,10 +52,10 @@ export const ScrollReveal: React.FC<ScrollRevealProps> = ({ children, className 
     <div
       ref={ref}
       style={delay > 0 ? { transitionDelay: `${delay}ms` } : undefined}
-      className={`transition duration-700 ease-game motion-reduce:transition-none ${
+      className={`transition duration-700 ease-game ${
         visible
           ? 'opacity-100 translate-y-0 blur-0'
-          : 'motion-safe:opacity-0 motion-safe:translate-y-8 motion-safe:blur-sm'
+          : 'opacity-0 translate-y-8 blur-sm'
       } ${className}`}
     >
       {children}

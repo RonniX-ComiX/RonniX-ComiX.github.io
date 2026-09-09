@@ -21,7 +21,21 @@ service cloud.firestore {
         && request.resource.data.content.size() >= 1
         && request.resource.data.content.size() <= 50000
         && request.resource.data.category in ['news', 'comics', 'books', 'games', 'movies', 'series']
-        && (!('coverUrl' in request.resource.data) || request.resource.data.coverUrl is string);
+        && (!('coverUrl' in request.resource.data) || request.resource.data.coverUrl is string)
+        && (!('themes' in request.resource.data) || request.resource.data.themes is list)
+        && (!('author' in request.resource.data) || request.resource.data.author is string)
+        && (!('artist' in request.resource.data) || request.resource.data.artist is string)
+        && (!('inker' in request.resource.data) || request.resource.data.inker is string)
+        && (!('colorist' in request.resource.data) || request.resource.data.colorist is string)
+        && (!('letterer' in request.resource.data) || request.resource.data.letterer is string)
+        && (!('editor' in request.resource.data) || request.resource.data.editor is string)
+        && (!('executiveEditor' in request.resource.data) || request.resource.data.executiveEditor is string)
+        && (!('coverArtists' in request.resource.data) || request.resource.data.coverArtists is list)
+        && (!('releaseYearDe' in request.resource.data) || request.resource.data.releaseYearDe is string)
+        && (!('releaseYearOriginal' in request.resource.data) || request.resource.data.releaseYearOriginal is string)
+        && (!('originCountry' in request.resource.data) || request.resource.data.originCountry is string)
+        && (!('publisherDe' in request.resource.data) || request.resource.data.publisherDe is string)
+        && (!('publisherOriginal' in request.resource.data) || request.resource.data.publisherOriginal is string);
     }
     function isValidComment() {
       return request.resource.data.text is string
@@ -92,6 +106,28 @@ service cloud.firestore {
     // --- USERS PRIVATE (PII: email, nur Owner/Admin) ---
     match /usersPrivate/{userId} {
       allow read, write: if isOwner(userId) || isAdmin();
+    }
+
+    // --- COMMENT SUBSCRIPTIONS (In-App-Notify-Opt-in, nur eigenes Doc; kein E-Mail-Feld) ---
+    match /commentSubscriptions/{subId} {
+      allow read: if isAuth() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isAuth()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.postId is string
+        && request.resource.data.keys().hasOnly(['postId', 'uid', 'notifyReplies', 'createdAt', 'updatedAt']);
+      allow update: if isAuth()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['notifyReplies', 'updatedAt']);
+      allow delete: if isAuth() && (resource.data.uid == request.auth.uid || isAdmin());
+    }
+
+    // --- NOTIFICATIONS (nur Functions schreiben, Owner liest/schließt) ---
+    match /notifications/{userId}/items/{itemId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow update: if isOwner(userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow create, delete: if false;
     }
 
     // --- GLOBAL LOGOUT SIGNAL (nur Functions schreiben, Clients lesen eigenes Doc) ---

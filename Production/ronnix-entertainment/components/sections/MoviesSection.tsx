@@ -17,6 +17,7 @@ import { localizePath } from '../../utils/domainConfig';
 import { PostItemListSchema } from '../PostItemListSchema';
 import { ScrollReveal } from '../ScrollReveal';
 import { SectorCard } from '../SectorCard';
+import { AdminCreateButton } from '../post/AdminCreateButton';
 
 export const MoviesSection: React.FC = () => {
   const { t, language } = useLanguage();
@@ -34,7 +35,8 @@ export const MoviesSection: React.FC = () => {
 
   return (
     <section className="min-h-[50vh]">
-      <SectionTitle title={t.home.movies.title} eyebrow="CINEMA SECTOR" />
+      <SectionTitle title={t.home.movies.title} />
+      <AdminCreateButton category="movies" />
       <PostItemListSchema posts={posts} name={t.home.movies.title} />
       
       {loading ? (
@@ -51,7 +53,7 @@ export const MoviesSection: React.FC = () => {
             const displayTitle = (language === 'en' && post.titleEn) ? post.titleEn : post.title;
 
             return (
-                <SectorCard to={localizePath(`/post/${post.id}`, language)} key={post.id} accent="yellow" tilt={i % 2 === 0 ? -1 : 1} dimmed={isScheduled}>
+                <SectorCard to={localizePath(`/post/${post.id}`, language)} key={post.id} accent="green" tilt={i % 2 === 0 ? -1 : 1} dimmed={isScheduled}>
                 <div className="rounded-lg overflow-hidden bg-black">
 
                     {/* Poster Image Container - REMOVED SCALE EFFECT HERE */}
@@ -78,9 +80,9 @@ export const MoviesSection: React.FC = () => {
                                 </span>
                              </div>
 
-                             {/* Theme Badge */}
+                             {/* Theme Badge (erstes Multi-Theme) */}
                              <span className="bg-red-600 text-white text-xs font-bold uppercase tracking-widest px-2 py-1 rounded shadow-[2px_2px_0_rgba(0,0,0,1)] border-2 border-black">
-                                {t.home.admin.themes[post.theme as keyof typeof t.home.admin.themes] || post.theme || 'Review'}
+                                {t.home.admin.themes[((post.themes?.[0] || post.theme) as keyof typeof t.home.admin.themes)] || post.themes?.[0] || post.theme || 'Review'}
                              </span>
                         </div>
 

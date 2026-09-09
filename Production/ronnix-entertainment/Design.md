@@ -57,12 +57,13 @@
     (Navbar-Overlay, `/sso`, `/sso-bounce`-Vollmodus, `/sso-seed`, `/global-logout`):
     Zielsektor-Readout (`TARGET SECTOR — …`), Phasen am echten State
     (`preparing → transfer → docking → error`), System-Fonts only (kein FOUT),
-    GPU-only-Motion, Reduced-Motion → statisch, Inline-SVG (keine neuen Icons).
+    GPU-only-Motion (Reduced-Motion-Abschaltung bewusst entfernt, 2026-09-09),
+    Inline-SVG (keine neuen Icons).
   - `components/SEO.tsx` (`bareTitle`) — transiente Routen setzen markenreinen
     Tab-Titel (nur Site-Name), nie „SSO | …".
   - `components/ViewTransitionHandler.tsx` + `index.css`-Wipe — Same-Origin-Wechsel
     per View Transitions API (Warp-Wipe, 320 ms, `cubic-bezier(0.32,0.72,0,1)`);
-    Fallback instant, Reduced-Motion instant, Browser-Zurück instant (Limitation).
+    Fallback instant, Browser-Zurück instant (Limitation).
   - Cross-Origin bleibt Reload, wirkt kontinuierlich: identischer `#0a0a0a`-Boot,
     identischer WarpScreen beidseitig, markenreiner Titel, Font-Preload in
     `index.html` für die Zielseite.
@@ -75,8 +76,8 @@
   `durationMs` in `[sso]`-Logs (Token-Fetch, Silent-Check, Callback-Exchange).
 - **Smoothness (keine Sprünge, CLS-Budget 0):** Erster Paint wartet auf Auth
   (Loader + Gate, keine Gast→User-Blitzer). Danach `components/AuthSlot.tsx`:
-  Grid-gestapelte, flächengrößte Box + Opazitäts-Crossfade (`authCrossfadeMs`),
-  Reduced-Motion → instant in derselben Box. Eingesetzt im Navbar-Auth-Button
+  Grid-gestapelte, flächengrößte Box + Opazitäts-Crossfade (`authCrossfadeMs`).
+  Eingesetzt im Navbar-Auth-Button
   (Desktop/Mobil, Namen trunkiert via `truncate`+`max-w`). `PostDetail`-Reply immer
   gemountet (`disabled` statt konditional). Guards (`/profile`, `/create`) sehen dank
   Gate nur entschiedene Zustände.
@@ -174,7 +175,7 @@
   (`hero.subtitle`, ≤20 Worte) + 1 primärer CTA (`hero.ctaPrimary` → News,
   lokalisiert, Skew-Pill) + `QuickNav` (7 Sektoren, lokalisiert) als Abschluss.
   Intro nur per Session-Flag (Lazy-Initializer, kein Effect-setState),
-  Animationen via `motion-safe:`, Deko mit `aria-hidden`.
+  Deko mit `aria-hidden`.
 - **i18n-Keys neu:** `hero.ctaPrimary`, `contact.thanksTitle/thanksText/backHome`
   (je DE/EN in `locales/home.ts`).
 - **Lint-Gate:** `eslint` (+ `@eslint/js`, `typescript-eslint`, `globals`,
@@ -236,18 +237,20 @@
   QuickNav-Buttons (Pill-Rund raus).
 - **Farben:** Rot+Neutral-Disziplin (Hero-Glow Sky→Rot, Logo-Glow Rot, Footer
   bewusst neutral). Sektor-Farben nur in Cards/Nav/Badges.
-- **Eyebrows:** `SectionTitle` hat optionale `eyebrow`-Prop (PS2P-Pixel-Font,
-  rot, sprachneutral): FRESH SIGNALS / NEWS FEED / PANEL / PAGE / ARCADE /
-  CINEMA / BINGE SECTOR, OPEN CHANNEL; Hero: RONNIX UNIVERSE. PS2P ist damit
-  aktiv genutzt (zuvor nur GameZ-Titel).
+- **Eyebrows (entfernt 2026-09-09):** Die SECTOR-Kicker über den H2s
+  (`RONNIX UNIVERSE`, `FRESH SIGNALS`, `NEWS FEED`, `PANEL/PAGE/ARCADE/CINEMA/
+  BINGE SECTOR`, `OPEN CHANNEL`) sind raus — `SectionTitle` nimmt nur noch
+  `title`, der optionale `eyebrow`-Prop ist gelöscht (kein toter Code).
+  PS2P bleibt nur dort, wo er trägt (GameZ-Titel).
 - **Spacing:** Sections `py-24 md:py-32`, App-Wrapper + Article/Search `py-24`.
 - **ScrollReveal (`components/ScrollReveal.tsx`):** IntersectionObserver,
-  einmalig, Fade-Up + Ent-Blur (Spiel-Kurve), `delay`-Prop; Reduced-Motion →
-  sofort sichtbar (Hidden-Klassen nur unter `motion-safe:`). Eingesetzt auf
+  einmalig, Fade-Up + Ent-Blur (Spiel-Kurve), `delay`-Prop. Eingesetzt auf
   allen 7 Grids + Kontakt-Formular. Kein `scroll`-Listener (verboten).
-- **Reduced Motion global (`index.css`):** `animate-fade-in/slide-up/pulse/
-  spin` werden statisch + `scroll-behavior: auto` (Warp/View-Transition hatten
-  eigene Guards). Hover-Transitions bleiben (kurz, nutzerinitiiert).
+- **Motion-Konsistenz (2026-09-09):** Alle `prefers-reduced-motion`-Abschaltungen
+  sind entfernt (`index.css`-Blöcke, `AuthSlot`-Hook, `WarpScreen`-Guards,
+  `ViewTransitionHandler`, `ScrollReveal`-Varianten, `Hero motion-safe:`).
+  Animationen laufen für alle Nutzer gleich; `scroll-behavior: smooth` ist jetzt
+  global. Hover-Transitions bleiben (kurz, nutzerinitiiert).
 - **Nav:** Desktop-Leiste erst ab `xl` (1024 war gequetscht), Drawer spiegelt
   nach links (Border, Schatten, Ausrichtung, `pt-24`), Mobile-Flags/Profil
   linksbündig.
@@ -261,10 +264,14 @@
   `fetchpriority=high`), alle anderen `loading="lazy" + decoding="async"`
   (Sections, Latest, Search, Avatare, Footer, Modals; Navbar-Logo eager).
   Container reservieren Ratios (Aspects/fixe Höhen) — kein `width/height`
-  nötig; LatestPosts-Skeleton im Kartenmaß (5 Bezel-Platzhalter, kein CLS).
+  nötig; LatestPosts-Skeleton im Kartenmaß (5 Bezel-Platzhalter im
+  Kartenstreifen, kein CLS).
   `src/assets`-Umzug entfällt bewusst (unnötig seit Caching-Fix).
 - **Caching (`firebase.json`):** `immutable 1y` nur noch `/assets/*` (Vite-
   Hashes), `public/`-Bilder/Fonts 30d `must-revalidate` (kein Stale-Logo mehr).
+  `/` + extensionless SPA-Routen (`**/!(*.*)`: `/news`, `/post/…`, `/en/…`)
+  `no-cache, must-revalidate` (2026-09-09) — zuvor fiel `/` auf den
+  Firebase-Default `max-age=3600` und zeigte bis 1h alte Designs nach Deploy.
 - **A11y:** Skip-Link `#main` (lokalisiert, `navigation.navbar.skipToContent`),
   globaler `:focus-visible`-Ring (Rot); nackte `focus:outline-none` entfernt
   (Burger, Editor-Fläche), Ersatz-Ringe bleiben. Kontraste: Icons/Footer
@@ -284,5 +291,102 @@
   überall; `ease-game`-Kurve zentral (`tailwind.config`, SectorCard,
   ComicButton, ScrollReveal).
 - **Einschränkungen:** Navbar-`scroll`-Listener bleibt (ScrollReveal deckt
-  Sektionen; Sticky-Refactor = Backlog); Hover-Transitions laufen unter
-  Reduced Motion weiter (kurz, nutzerinitiiert).
+  Sektionen; Sticky-Refactor = Backlog).
+- **Latest-Carousel (`components/LatestPosts.tsx`, 2026-09-09):** statt
+  5er-Grid jetzt IMMER horizontal: 10 Posts (`useCachedPosts('latest', 10)`),
+  Snap-Leiste mit versteckter Scrollbar, Pfeile (eigene `arrow-left/right`-
+  Glyphen, 2 Karten pro Klick, Disabled an den Rändern via Scroll-Listener),
+  Mausrad-Wheel → horizontal (nur solange Track Luft hat), Touch-Swipe und
+  Tastatur nativ. Kartenbreite fix `w-[240px] md:w-[260px]`, `aspect-[2/3]` →
+  Sektionshöhe konstant, kein zusätzliches Vertikal-Scrollen. Ersetzt das alte
+  `lg:grid-cols-5`-Verhalten (Desktop) komplett. i18n: `hero.carouselPrev/
+  carouselNext`.
+- **Post-Erstellung/Anzeige (2026-09-09):**
+  - Theme-Multi-Select-Fix: `CreatePost` reicht `setThemes` als Single Source
+    durch (hochgestuft), `setTheme` roh (kein `setThemes([v])`-Clobber mehr) —
+    vorher wurde bei jedem Zusatz-Theme das Array auf 1 Element zurückgesetzt.
+  - `postCategoryToRoute()` (`utils/domainConfig.ts`) als zentrale
+    Firestore-Kategorie → SPA-Route (comics→`/comix`, books→`/boox`,
+    games→`/gamez`, movies→`/moviez`, series→`/seriez`, news→`/news`). Behebt
+    404 nach Create (`CreatePost`), nach Delete und im Back-Link
+    (`PostDetail`; Comics-Posts zeigten zuvor `default → /comics`).
+  - Edit-Fetch stabilisiert: Fehlertexte über Refs, Deps `[id, isAdmin]` — kein
+    Refetch/Reset des Formulars bei Sprachwechsel.
+  - Legacy-Felder entfernt (2026-09-09): Die `Legacy:`-Inputs (`itemAuthor`,
+    `publisher`, `releaseYear`) sind aus `PostMetaFields` raus — neue Posts
+    nutzen nur noch Credits (`creditAuthor`), Herkunft (`publisherDe`,
+    `releaseYearDe`). Die State-Vars bleiben in `CreatePost` (Edit-Load +
+    Fallback-Writes), damit alte Posts bei Bearbeitung ihre Legacy-Werte
+    behalten (Migration).
+
+## 12. Blog-Ausbau: Credits, Herkunft, Multi-Themes, Notify, Editor (2026-09-09)
+
+- **Zweck:** Getrennte Comic-Credits, DE/Original-Herkunft, mehrere Themen,
+  Admin-Inline-Create, Kommentar-Notify, härterer Editor/Renderer, MovieZ-grün.
+- **Typen/Config (`utils/`):** `postTypes.ts` neu (Credits/Origin/Themes +
+  Migration `itemAuthor→author`, `publisher→publisherDe`, `releaseYear→
+  releaseYearDe`, `theme→themes[0]`); `appConfig.ts` erweitert
+  (`POST_CATEGORIES`, `POST_THEMES`, `MAX_THEMES_PER_POST=3`,
+  `COVER_FALLBACK=/images/preview.png`, `DRAFT_KEY_PREFIX`,
+  `COMMENTS_PAGE_SIZE`); `richTextSanitize.ts` neu (Allowlist, `isSafeUrl`,
+  `extractYouTubeId`, nocookie-Embeds, Paste/Render-Pfade);
+  `postExcerpt.ts` neu (`htmlToText` SSG-sicher, `getExcerpt` Wortgrenze,
+  `getReadingMinutes`, `getThemeLabels`, DE/EN-Fallbacks).
+- **Admin-Create:** `post/AdminCreateButton.tsx` neu (`/create?category=`,
+  lokalisiert, nur `isAdmin`) in allen 6 Sections; `CreatePost` liest
+  `?category=` (Prefill, nur neue Posts), speichert neu + Legacy-Fallbacks,
+  navigiert sprach-erhaltend zurück.
+- **Formular/Detail:** `PostMetaFields` mit Multi-Theme-Chips (`aria-pressed`,
+  Max-Limit), Credits-Sektion (8 optionale Felder, Cover als Komma-Liste),
+  Herkunft (Jahr DE/Original, Land-Datalist, Verlag DE/Original);
+  `PostDetail` gruppiert Story/Art/Publishing (nur gesetzte Felder),
+  Multi-Badges + Lesedauer, nativer Share + WhatsApp/Telegram, Cover-Fallback
+  + onError-Guard, Renderer via `sanitizeRender` (statt inline-DOMPurify).
+- **Farben:** `SectorCard` `categoryAccent`: MovieZ `green`, GameZ `teal`
+  (neuer `teal`-Shadow); `MoviesSection`/`QuickNav`/`LatestPosts` mitgezogen.
+  `nav/navStyles.ts` angeglichen (2026-09-09): GameZ teal, MovieZ grün —
+  Navbar/MobileDrawer erben es über `getNavStyle`, Single Source ist
+  `categoryAccent`.
+- **Suche/Excerpts:** Sections nutzen `postExcerpt.getExcerpt` (kein
+  `document.createElement` mehr); `Search` matcht Titel + Credits/Verlage.
+- **Notify (nur In-App, kein E-Mail-Versand):** `post/CommentNotifyToggle.tsx`
+  neu (Switch, eigenes `commentSubscriptions/{postId}_{uid}`-Doc ohne
+  E-Mail-Feld); `firestore.rules` für Subs/Notifications;
+  Functions `onCommentCreated` mit In-App-Fan-out
+  (`notifications/{uid}/items`, ohne Eigen-Notify, best-effort).
+- **Editor:** `RichTextEditor` mit `onPaste`-Sanitize + `id`-Sync (Edit-Fix);
+  `EditorModals` validieren URLs (`isSafeUrl`), escapen Alt/Text, nutzen
+  nocookie-Embeds; `invalidUrl`-Keys DE/EN.
+- **Scripts:** `typecheck`, `lint:fix`, `verify`, `env:check`,
+  `covers:check --dry-run`, `sitemap:check --dry-run` neu; `eslint.config.js`
+  deckt `scripts/**/*.mjs` ab (Node-Globals).
+- **Einschränkungen:** Benachrichtigungen sind bewusst nur In-App (kein
+  E-Mail-Versand, keine Extension, kein SMTP nötig); ungelesene Items brauchen
+  noch eine Anzeige (z.B. Badge in der Navbar = Backlog).
+  Draft-Autosave/Related/TOC/Prev-Next bleiben Backlog; Suche ohne Ranking.
+
+## 13. Release-scharfe Cache-Invalidierung (2026-09-09)
+
+- **Problem:** Nach Domain-Wechsel zeigte die Zieldomain veraltete Inhalte —
+  `useCachedPosts` persistierte Post-Listen bis 5 Min pro Origin ohne
+  Versionsbindung; nach Refresh/Revalidate war alles frisch. App-Code war nie
+  betroffen (Vite-Hashes + `immutable`, HTML `no-cache`).
+- **Build-ID (`vite.config.ts` → `define __BUILD_ID__`, Format `YYYYMMDDHHmmss`
+  UTC; Deklaration in `vite-env.d.ts`):** jeder `npm run build` prägt eine neue
+  ID ein, kein manuelles Version-Bump nötig.
+- **Versionierte Keys (`utils/appConfig.ts`):** `BUILD_ID` (Fallback `'dev'`),
+  `CACHE_NAMESPACE` (`v<BUILD_ID>`), `versionedCacheKey()` — einzige Quelle für
+  volatile Cache-Keys (`ronnix_cache_v<BUILD_ID>_<key>`).
+- **Purge (`hooks/useCachedPosts.ts`):** `purgeStaleCacheGenerations()` löscht
+  einmal je Page-Load Keys älterer Generationen (nur `ronnix_cache_*`-Prefix).
+- **Ausgenommen (überleben Releases):** Drafts (`ronnix_draft_*`), `ronnix-lang`,
+  SSO-Hints, Hero-Flag, `?site=`-Override.
+- **Brand-Assets (2026-09-09):** `versionedAssetUrl()` hängt `?v=<BUILD_ID>` an
+  gleich-Origin-Pfade (Logo, Hero-Bild, Google-Icon, OG-Images, Cover-Fallback
+  zur Render-Zeit) — 30d-Browser-Caches holen nach jedem Release neu. Absolute
+  URLs (Storage-Cover) bleiben unberührt; in die DB wird nie versioniert
+  persistiert (`CreatePost`-Default bleibt plain). Ausnahmen (statisch, Doku):
+  `noise.svg`-Klasse, Favicons/Font-Preloads/`og:image` in `index.html`.
+- **Einschränkungen:** Firestore-Offline-Cache (managed, kein Key-Eingriff) und
+  Remote-Config-Intervall (1h prod) bleiben natürliche Frische-Grenzen;
+  ungehashte `public/`-Bilder bei Tausch umbenennen (30d-Cache).

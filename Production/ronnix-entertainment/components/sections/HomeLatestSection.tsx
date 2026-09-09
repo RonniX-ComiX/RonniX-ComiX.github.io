@@ -1,9 +1,10 @@
 /**
  * sections/HomeLatestSection.tsx — „Frisch aus dem Universum" (Main-Home).
  *
- * Feature: Sektions-Rahmen (H2 + Glow) um `LatestPosts` (5 neueste Posts,
- * kategorieübergreifend). Benutzung: nur auf `/` der Main-Domain (`App.tsx`).
- * Gehört NICHT hierher: Post-Karten (`LatestPosts.tsx`), Kategorie-Sections.
+ * Feature: Sektions-Rahmen (H2 + Glow) um `LatestPosts` (10 neueste Posts,
+ * kategorieübergreifend, Horizontal-Carousel). Benutzung: nur auf `/` der
+ * Main-Domain (`App.tsx`). Gehört NICHT hierher: Post-Karten
+ * (`LatestPosts.tsx`), Kategorie-Sections.
  */
 
 import React from 'react';
@@ -17,9 +18,6 @@ export const HomeLatestSection: React.FC = () => {
     <section className="py-24 md:py-32 px-6 bg-neutral-950 relative overflow-hidden">
         <div className="container mx-auto max-w-6xl relative z-10">
              {/* Section Header */}
-             <p className="font-gaming text-[10px] md:text-xs tracking-[0.35em] uppercase text-red-500 mb-4 text-center">
-                 FRESH SIGNALS
-             </p>
              <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
                  <div className="flex items-center gap-3">
                      <h2 className="text-3xl md:text-4xl font-retro text-white tracking-wide uppercase drop-shadow-md">

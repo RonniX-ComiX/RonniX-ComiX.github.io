@@ -1,3 +1,16 @@
+/**
+ * vite.config.ts — Vite-Build: React, Port-Disziplin, Chunk-Splits, Build-ID.
+ *
+ * Feature: Dev/Preview immer Port 4174 (`strictPort`), Production ohne
+ * Tailwind-CDN (`removeDevScripts`), Vendor-Chunks (firebase/react/utils) für
+ * kleinere Diffs, plus `__BUILD_ID__` (Zeitstempel je Build, UTC) als Anker für
+ * die Release-scharfe Cache-Invalidierung (`utils/appConfig.ts` BUILD_ID →
+ * versionierte localStorage-Keys, alte Generationen werden beim Start gepurgt).
+ * Benutzung: `npm run build` / `npm run dev` / `vite preview --port 4174`.
+ * Gehört NICHT hierher: SSG-Setup (siehe `docs/PRERENDER.md`, Kette unvollständig),
+ * Laufzeit-Config (Env/`utils/appConfig.ts`), Hosting-Header (`firebase.json`).
+ */
+
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -22,6 +35,13 @@ export default defineConfig(({
     react(),
     removeDevScripts()
   ],
+  // Release-scharfe Cache-Invalidierung: jeder Build prägt seine ID ein
+  // (kompakt `YYYYMMDDHHmmss`, UTC). Typ-Deklaration in `vite-env.d.ts`.
+  define: {
+    __BUILD_ID__: JSON.stringify(
+      new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14),
+    ),
+  },
   server: {
     port: 4174,
     strictPort: true,

@@ -17,6 +17,8 @@ import { localizePath } from '../../utils/domainConfig';
 import { PostItemListSchema } from '../PostItemListSchema';
 import { ScrollReveal } from '../ScrollReveal';
 import { SectorCard } from '../SectorCard';
+import { AdminCreateButton } from '../post/AdminCreateButton';
+import { getExcerpt } from '../../utils/postExcerpt';
 
 export const NewsSection: React.FC = () => {
   const { t, language } = useLanguage();
@@ -31,15 +33,12 @@ export const NewsSection: React.FC = () => {
       }).format(date);
   };
 
-  const getExcerpt = (html: string) => {
-      const tmp = document.createElement('DIV');
-      tmp.innerHTML = html;
-      return tmp.textContent?.substring(0, 100) + '...' || '';
-  };
+  const getCardExcerpt = (html: string) => getExcerpt(html, 100);
 
   return (
     <section className="min-h-[50vh]">
-      <SectionTitle title={t.home.news.title} eyebrow="NEWS FEED" />
+      <SectionTitle title={t.home.news.title} />
+      <AdminCreateButton category="news" />
       <PostItemListSchema posts={posts} name={t.home.news.title} />
       
       {loading ? (
@@ -84,7 +83,7 @@ export const NewsSection: React.FC = () => {
                         </h3>
 
                         <p className="text-gray-400 text-sm line-clamp-2 mb-4">
-                            {getExcerpt(displayContent)}
+                            {getCardExcerpt(displayContent)}
                         </p>
                         
                         <div className="flex items-center justify-end text-pink-500 text-sm font-bold uppercase tracking-wider group-hover:underline">

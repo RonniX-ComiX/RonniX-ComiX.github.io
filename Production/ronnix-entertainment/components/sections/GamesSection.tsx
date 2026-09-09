@@ -17,6 +17,8 @@ import { localizePath } from '../../utils/domainConfig';
 import { PostItemListSchema } from '../PostItemListSchema';
 import { ScrollReveal } from '../ScrollReveal';
 import { SectorCard } from '../SectorCard';
+import { AdminCreateButton } from '../post/AdminCreateButton';
+import { getExcerpt as getSharedExcerpt } from '../../utils/postExcerpt';
 
 export const GamesSection: React.FC = () => {
   const { t, language } = useLanguage();
@@ -32,16 +34,13 @@ export const GamesSection: React.FC = () => {
       }).format(date);
   };
 
-  // Helper to strip HTML for excerpt
-  const getExcerpt = (html: string) => {
-      const tmp = document.createElement('DIV');
-      tmp.innerHTML = html;
-      return tmp.textContent?.substring(0, 80) + '...' || '';
-  };
+  // Helper to strip HTML for excerpt (SSG-sicher, Wortgrenze)
+  const getExcerpt = (html: string) => getSharedExcerpt(html, 80);
 
   return (
     <section className="min-h-[50vh]">
-      <SectionTitle title={t.home.games.title} eyebrow="ARCADE SECTOR" />
+      <SectionTitle title={t.home.games.title} />
+      <AdminCreateButton category="games" />
       <PostItemListSchema posts={posts} name={t.home.games.title} />
       
       {loading ? (
@@ -59,7 +58,7 @@ export const GamesSection: React.FC = () => {
               const displayContent = (language === 'en' && game.contentEn) ? game.contentEn : game.content;
 
               return (
-                 <SectorCard to={localizePath(`/post/${game.id}`, language)} key={game.id} accent="green" tilt={i % 2 === 0 ? -1 : 1} dimmed={isScheduled}>
+                  <SectorCard to={localizePath(`/post/${game.id}`, language)} key={game.id} accent="teal" tilt={i % 2 === 0 ? -1 : 1} dimmed={isScheduled}>
                  <div className="bg-neutral-900 rounded-lg overflow-hidden flex flex-col h-full">
 
                      {/* Game Cover Area (Portrait) */}
@@ -75,11 +74,11 @@ export const GamesSection: React.FC = () => {
                         {/* Gradient Overlay bottom */}
                         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black via-black/80 to-transparent"></div>
 
-                        {/* Top Right: Theme Badge (Like a Skill/Achievement) */}
+                        {/* Top Right: Theme Badge (Like a Skill/Achievement, erstes Multi-Theme) */}
                         <div className="absolute top-2 right-2">
                              <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-white bg-red-600 border-2 border-black px-2 py-1 rounded shadow-[2px_2px_0_rgba(0,0,0,1)] transform rotate-2 group-hover:rotate-0 transition-transform">
                                 <Icon name="trophy" size={10} />
-                                {t.home.admin.themes[game.theme as keyof typeof t.home.admin.themes] || game.theme || 'Review'}
+                                {t.home.admin.themes[((game.themes?.[0] || game.theme) as keyof typeof t.home.admin.themes)] || game.themes?.[0] || game.theme || 'Review'}
                              </span>
                         </div>
 

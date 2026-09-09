@@ -25,6 +25,7 @@ import {
   stripLangPrefix,
   type SiteLanguage,
 } from '../utils/domainConfig';
+import { versionedAssetUrl } from '../utils/appConfig';
 import { useLanguageOptional } from '../context/LanguageContext';
 
 interface SEOProps {
@@ -101,7 +102,7 @@ export const SEO: React.FC<SEOProps> = ({
   const { language } = useLanguageOptional();
 
   const siteName = SITE_NAMES[currentCategory] || SITE_NAMES.main;
-  const defaultImage = `https://ronnixentertainment.de${OG_IMAGES[currentCategory] || OG_IMAGES.main}`;
+  const defaultImage = `https://ronnixentertainment.de${versionedAssetUrl(OG_IMAGES[currentCategory] || OG_IMAGES.main)}`;
 
   const metaDescription =
     (language === 'en' ? descriptionEn || description : description || descriptionEn) ||

@@ -4,7 +4,7 @@
  * Feature: React Router navigiert same-document (keine nativen Cross-Document
  * Transitions) — darum fängt dieser Handler interne Link-Klicks in der Capture-Phase
  * ab und wickelt sie in `document.startViewTransition()` (Wipe via `::view-transition`
- * in `index.css`). Fallbacks: ohne API, bei `prefers-reduced-motion`, Modifier-Klicks,
+ * in `index.css`). Fallbacks: ohne API, Modifier-Klicks,
  * `target/_blank`, `download` und externen URLs läuft alles nativ/instant weiter.
  * Browser-Zurück (Popstate) bleibt instant (Limitation, dokumentiert).
  * Use Cases: alle internen `<a href="/…">`/`<Link>`-Klicks. Benutzung: einmalig im
@@ -46,11 +46,8 @@ export const ViewTransitionHandler: React.FC = () => {
       if (url.origin !== window.location.origin) return;
       // Reiner Hash-Sprung auf derselben Seite: nativ laufen lassen.
       if (url.pathname === window.location.pathname && url.search === window.location.search) return;
-      const reduceMotion =
-        typeof window !== 'undefined' &&
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       const startVT = (document as DocumentWithVT).startViewTransition?.bind(document);
-      if (typeof startVT !== 'function' || reduceMotion) return; // nativ/instant
+      if (typeof startVT !== 'function') return; // nativ/instant
       event.preventDefault();
       startVT(() => {
         navigate(`${url.pathname}${url.search}${url.hash}`, { replace: false });

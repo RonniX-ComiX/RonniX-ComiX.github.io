@@ -31,6 +31,7 @@ interface SearchHit {
   titleEn?: string;
   category: string;
   coverUrl: string;
+  themes?: string[];
 }
 
 export const Search: React.FC = () => {
@@ -75,13 +76,19 @@ export const Search: React.FC = () => {
           if (!isAdmin && (data.publishedAt?.seconds ?? 0) > now) return;
           const title = typeof data.title === 'string' ? data.title : '';
           const titleEn = typeof data.titleEn === 'string' ? data.titleEn : '';
-          if (title.toLowerCase().includes(q) || titleEn.toLowerCase().includes(q)) {
+          const haystack = [
+            title, titleEn,
+            data.author, data.itemAuthor, data.artist, data.publisherDe, data.publisher,
+            Array.isArray(data.coverArtists) ? data.coverArtists.join(' ') : '',
+          ].filter(Boolean).join(' ').toLowerCase();
+          if (haystack.includes(q)) {
             found.push({
               id: docSnap.id,
               title,
               titleEn,
               category: typeof data.category === 'string' ? data.category : 'news',
               coverUrl: typeof data.coverUrl === 'string' ? data.coverUrl : '',
+              themes: Array.isArray(data.themes) ? data.themes : (data.theme ? [data.theme] : []),
             });
           }
         });
