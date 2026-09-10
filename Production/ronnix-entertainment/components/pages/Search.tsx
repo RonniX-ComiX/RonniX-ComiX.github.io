@@ -149,7 +149,7 @@ export const Search: React.FC = () => {
                         {hit.coverUrl ? (
                           <img
                             src={hit.coverUrl}
-                            alt=""
+                            alt={displayTitle}
                             loading="lazy"
                             decoding="async"
                             className="w-16 h-16 object-cover rounded-lg border border-neutral-700 flex-shrink-0"

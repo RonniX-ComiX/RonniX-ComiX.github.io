@@ -93,7 +93,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
 
       {/* Language Switcher Mobile */}
       <div className="flex items-center gap-6 font-retro text-xl">
-         <span className="text-gray-500 uppercase text-sm font-sans tracking-normal mr-2">
+          <span className="text-neutral-400 uppercase text-sm font-sans tracking-normal mr-2">
            {t.navigation.navbar.language}
          </span>
          <button

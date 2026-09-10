@@ -78,8 +78,8 @@ export type PostTheme = (typeof POST_THEMES)[number];
 /** Max. Themes pro Post (UI-Limit + Validierung). */
 export const MAX_THEMES_PER_POST = 3;
 
-/** Lokales Cover-Fallback (statt externem placehold.co-Hotlink; nutzt vorhandenes OG-Image). */
-export const COVER_FALLBACK = '/images/preview.png';
+/** Lokales Cover-Fallback als WebP (statt externem placehold.co-Hotlink; nutzt vorhandenes OG-Image). */
+export const COVER_FALLBACK = '/images/preview.webp';
 
 /** Draft-Autosave: localStorage-Key-Prefix + Intervall. */
 export const DRAFT_KEY_PREFIX = 'ronnix_draft_';

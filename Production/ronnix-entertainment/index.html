@@ -11,25 +11,14 @@
     <meta name="robots" content="index, follow, max-image-preview:large">
     <meta name="language" content="German">
 
-    <!-- Domains & Canonicals: Hostname-scharf per Inline-Skript (1 Build, 6 Domains).
+    <!-- Domains & Canonicals: Hostname-scharf per externem Skript (1 Build, 6 Domains).
          Ohne JS greift der Main-Fallback; mit JS (auch ohne React-Hydration)
-         zeigt der Canonical auf die echte Domain. React/Helmet überschreibt danach. -->
+         zeigt der Canonical auf die echte Domain. React/Helmet überschreibt danach.
+         Extern statt inline, weil die CSP Inline-Scripts blockt (`script-src 'self'`). -->
     <link id="static-canonical" rel="canonical" href="https://ronnixentertainment.de/" />
     <link rel="alternate" hreflang="de" href="https://ronnixentertainment.de/" />
     <link rel="alternate" hreflang="x-default" href="https://ronnixentertainment.de/" />
-    <script>
-      (function () {
-        try {
-          var origin = window.location.origin.toLowerCase();
-          var path = window.location.pathname.replace(/\/+$/, '') || '/';
-          var canonical = origin + path;
-          var link = document.getElementById('static-canonical');
-          if (link) link.setAttribute('href', canonical);
-          var ogUrl = document.querySelector('meta[property="og:url"]');
-          if (ogUrl) ogUrl.setAttribute('content', canonical);
-        } catch (e) { /* statischer Fallback bleibt */ }
-      })();
-    </script>
+    <script src="/canonical.js" defer></script>
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
@@ -62,14 +51,14 @@
     <meta name="theme-color" content="#0a0a0a">
 
     <!-- Performance & Security Hints (kein Google-Fonts-CDN mehr: Fonts sind selbst gehostet) -->
-    <!-- SSO: Preconnect zu den 5 Schwester-Domains + Functions-Origin (schnellere Domain-Wechsel) -->
-    <link rel="preconnect" href="https://ronnixcomix.de">
-    <link rel="preconnect" href="https://ronnixboox.de">
-    <link rel="preconnect" href="https://lamazgamez.de">
-    <link rel="preconnect" href="https://ronnixmoviez.de">
-    <link rel="preconnect" href="https://ronnixseriez.de">
+    <!-- Preconnect-Diät (PageSpeed: max. 4): nur API-kritische Origins; SSO-Ziele per dns-prefetch -->
     <link rel="preconnect" href="https://europe-west1-ronnix-comix.cloudfunctions.net">
-    <link rel="dns-prefetch" href="https://firestore.googleapis.com">
+    <link rel="preconnect" href="https://firestore.googleapis.com">
+    <link rel="dns-prefetch" href="https://ronnixcomix.de">
+    <link rel="dns-prefetch" href="https://ronnixboox.de">
+    <link rel="dns-prefetch" href="https://lamazgamez.de">
+    <link rel="dns-prefetch" href="https://ronnixmoviez.de">
+    <link rel="dns-prefetch" href="https://ronnixseriez.de">
     <link rel="dns-prefetch" href="https://identitytoolkit.googleapis.com">
     <link rel="dns-prefetch" href="https://securetoken.googleapis.com">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -125,6 +114,8 @@
          local()-Fallbacks in index.css fangen den Rest ohne Shift ab. -->
     <link rel="preload" href="/fonts/bangers-latin-400.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="/fonts/roboto-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+    <!-- LCP: Hero-WebP früh entdecken (Quellenauswahl bleibt beim Browser via srcset) -->
+    <link rel="preload" as="image" href="/images/RonniX-1024.webp" imagesrcset="/images/RonniX-640.webp 640w, /images/RonniX-1024.webp 1024w, /images/RonniX-1600.webp 1600w" imagesizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 896px" fetchpriority="high">
     
     <style>
       /* CRITICAL CSS: Prevent White Flash (Inline for instant load) */

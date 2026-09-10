@@ -5,7 +5,9 @@
  * per Hidden-Iframe gegen die Main-Domain, ob dort eine Session existiert. Token kommt
  * per postMessage (nie URL/Logs), Gäste erzeugen KEINE Navigation. Nur wenn der stille
  * Check scheitert UND ein Login-Hinweis (`localStorage ronnix-sso-hint`) existiert,
- * gibt es einmalig den klassischen Full-Bounce als Fallback.
+ * gibt es einmalig den klassischen Full-Bounce als Fallback. Der Check startet
+ * erst im Idle (`requestIdleCallback`, Fallback 1,5s), damit das Hidden-Iframe
+ * nie das LCP-Fenster belastet.
  * Use Cases: Erstbesuch auf ronnixcomix.de & Co. mit Main-Session. Benutzung: einmalig
  * in `App.tsx` gemountet (`<SSOAutoLogin />`). Gehört NICHT hierher: Bounce-Logik
  * selbst (`components/pages/SSOBounce.tsx`), Token-Erzeugung (Backend).
@@ -53,6 +55,13 @@ export const SSOAutoLogin: React.FC = () => {
     } catch { /* ignore */ }
 
     started.current = true;
+    // Idle-Start (nicht im LCP-Fenster): Der stille Check lädt eine komplette
+    // Bounce-Seite im Hidden-Iframe — kein kritischer Pfad. Guards oben bleiben
+    // synchron (StrictMode-sicher), nur das Netzwerk wartet auf Idle.
+    let idleHandle: number | undefined;
+    let timeoutFallback: number | undefined;
+    let activeCleanup: (() => void) | undefined;
+    const runSilentCheck = () => {
     const checkStartedAt = typeof performance !== 'undefined' ? performance.now() : 0;
     const elapsedMs = () => (checkStartedAt ? Math.round(performance.now() - checkStartedAt) : -1);
     logInfo('sso-autologin', '[sso] Silent-Check gestartet');
@@ -138,7 +147,24 @@ export const SSOAutoLogin: React.FC = () => {
       fallbackBounce();
     }, SSO_CONFIG.silentCheckTimeoutMs);
 
-    return cleanup;
+      activeCleanup = cleanup;
+    };
+
+    const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback;
+    if (typeof ric === 'function') {
+      idleHandle = ric.call(window, runSilentCheck, { timeout: 4000 });
+    } else {
+      timeoutFallback = window.setTimeout(runSilentCheck, 1500);
+    }
+
+    return () => {
+      if (idleHandle !== undefined) {
+        const cic = (window as unknown as { cancelIdleCallback?: (h: number) => void }).cancelIdleCallback;
+        if (typeof cic === 'function') cic.call(window, idleHandle);
+      }
+      if (timeoutFallback !== undefined) window.clearTimeout(timeoutFallback);
+      activeCleanup?.();
+    };
   }, [currentUser, loading, searchParams]);
 
   return null;

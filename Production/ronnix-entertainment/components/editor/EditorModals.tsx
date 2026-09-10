@@ -188,7 +188,7 @@ export const EditorModals: React.FC<EditorModalsProps> = ({
                         <input
                             id="editor-img-alt"
                             type="text"
-                            placeholder="Beschreibung"
+                            placeholder={t.home.editor.imgAltPlaceholder}
                             value={modalInputs.alt || ''}
                             onChange={e => setModalInputs({...modalInputs, alt: e.target.value})}
                             className="w-full bg-black border border-neutral-700 rounded p-2 text-white focus:border-red-500 focus:outline-none"

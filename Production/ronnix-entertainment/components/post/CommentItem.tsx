@@ -209,7 +209,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
                                     value={replyText}
                                     autoFocus
                                     onChange={(e) => setReplyText(e.target.value)}
-                                    placeholder="Antwort schreiben..."
+                                    placeholder={t.home.postDetail.replyPlaceholder}
                                     className="flex-grow bg-black border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm focus:border-red-600 focus:outline-none"
                                 />
                                 <button type="submit" className="bg-red-700 hover:bg-red-600 text-white p-2 rounded-lg">

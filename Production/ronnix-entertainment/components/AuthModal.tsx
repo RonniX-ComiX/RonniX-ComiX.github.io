@@ -288,7 +288,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-gray-500 text-sm">
+            <p className="text-neutral-400 text-sm">
               {isLogin ? t.authModal.noAccount : t.authModal.hasAccount}
               <button 
                 onClick={() => {

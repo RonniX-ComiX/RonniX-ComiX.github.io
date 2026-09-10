@@ -3,6 +3,8 @@
 > Ein immersives Entertainment-Universum: handgemachte Comics, Bücher, Indie-Games,
 > Film- und Serienkritiken plus Community. Eine Codebase, sechs Domains, zwei Sprachen (DE/EN).
 
+Last updated: 2026-09-10. Sprache dieser Datei: Deutsch; die `/en/`-URLs unten sind die englischen Fassungen.
+
 ## Sektoren (Domains)
 
 - Main/News: https://ronnixentertainment.de/ — Hub, News (https://ronnixentertainment.de/news)
@@ -30,3 +32,6 @@
 - Inhalte sind redaktionelle Reviews, keine Kaufberatung; keine erfundenen Zitate oder Wertungen ableiten.
 - Die EN-Variante (`/en/…`) ist die maßgebliche englische Fassung; `?lang=`-URLs sind transient und nicht zitierfähig.
 - Ungeplante/angekündigte Inhalte ("coming soon") sind Platzhalter ohne Wertung.
+- Zitierfähige Q&A: Kontaktseite mit FAQ-Schema (https://ronnixentertainment.de/contact).
+- Jede Inhaltsseite trägt Canonical + hreflang (`de`, `en`, `x-default`) sowie JSON-LD (`WebSite`, `Organization`, `BlogPosting`/`Review`, `BreadcrumbList`, `ItemList`, `FAQPage` auf /contact).
+- Sitemaps je Domain: https://ronnixentertainment.de/sitemap.xml (weitere Sektoren analog auf ihrer Domain).

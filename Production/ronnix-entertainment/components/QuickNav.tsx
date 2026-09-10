@@ -47,7 +47,7 @@ export const QuickNav: React.FC = () => {
     <div className="w-full bg-neutral-950 border-y border-neutral-900 py-6">
       <div className="container mx-auto px-4">
         <div className="flex items-center gap-4 mb-4 md:hidden">
-             <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{t.home.hero.quickNav}</span>
+              <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">{t.home.hero.quickNav}</span>
              <div className="h-px bg-neutral-800 flex-grow"></div>
         </div>
         

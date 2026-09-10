@@ -416,7 +416,7 @@ export const CreatePost: React.FC = () => {
                         value={titleEn}
                         onChange={(e) => setTitleEn(e.target.value)}
                         className="w-full bg-black border border-neutral-700 text-white text-xl px-4 py-3 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-colors placeholder-gray-500 font-retro tracking-wide"
-                        placeholder="e.g. Batman: The Long Halloween Review"
+                        placeholder={t.home.admin.titlePlaceholderEn}
                     />
                 </div>
                 <div>
@@ -427,7 +427,7 @@ export const CreatePost: React.FC = () => {
                         id="post-content-en"
                         value={contentEn}
                         onChange={setContentEn}
-                        placeholder="Write your review in English..."
+                        placeholder={t.home.admin.contentPlaceholderEn}
                     />
                 </div>
             </div>

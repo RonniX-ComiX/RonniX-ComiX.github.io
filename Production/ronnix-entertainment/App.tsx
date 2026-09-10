@@ -32,6 +32,7 @@ import { ContactSection } from './components/sections/ContactSection';
 import { Footer } from './components/Footer';
 import { SEO } from './components/SEO';
 import { StructuredData } from './components/StructuredData';
+import { FaqSchema } from './components/FaqSchema';
 import { useRemoteConfigFlags } from './hooks/useRemoteConfigFlags';
 
 // Code-Splitting: schwere/Admin/SSO-Routen lazy (kleineres Initial-Bundle, bessere LCP)
@@ -67,24 +68,36 @@ const RouteFallback = () => (
   </div>
 );
 
-const NotFound = () => (
-  <div className="container mx-auto px-6 py-24 text-center min-h-[50vh]">
-    <SEO title="404" noIndex />
-    <h1 className="text-5xl font-retro text-white mb-4">404</h1>
-    <p className="text-gray-400 mb-6">Diese Seite existiert nicht.</p>
-    <Link to="/" className="text-red-500 hover:underline">Zur Startseite</Link>
-  </div>
-);
+const NotFound = () => {
+  const { t } = useLanguage();
+  return (
+    <div className="container mx-auto px-6 py-24 text-center min-h-[50vh]">
+      <SEO title="404" noIndex />
+      <h1 className="text-5xl font-retro text-white mb-4">404</h1>
+      <p className="text-gray-400 mb-6">{t.home.common.notFoundText}</p>
+      <Link to="/" className="text-red-500 hover:underline">{t.home.common.goHome}</Link>
+    </div>
+  );
+};
+
+// Screenreader-H1 für Listen-Seiten (visuelles Design nutzt H2-Kicker,
+// Crawler/KI brauchen genau eine H1 pro URL — DE pfadrein, EN `/en/`).
+const CategoryH1 = ({ de, en }: { de: string; en: string }) => {
+  const { language } = useLanguage();
+  return <h1 className="sr-only">{language === 'en' ? en : de}</h1>;
+};
 
 // Seiten-Wrapper (einmal definiert, je Sprache einmal geroutet — kein Copy-Paste pro `/en/`).
 const NewsPage = () => (
   <div className="container mx-auto px-6 py-24 animate-fade-in">
     <SEO
       title="News & Updates"
+      titleEn="News & Updates"
       description="Neuigkeiten aus dem RonniX-Universum: Comics, Bücher, Games, Filme & Serien."
       descriptionEn="News & updates from the RonniX universe: comics, books, games, movies & series."
       canonicalPath="/news"
     />
+    <CategoryH1 de="News & Updates" en="News & Updates" />
     <NewsSection />
   </div>
 );
@@ -98,6 +111,8 @@ const ContactPage = () => (
       descriptionEn="Contact the RonniX team."
       canonicalPath="/contact"
     />
+    <FaqSchema />
+    <CategoryH1 de="Kontakt" en="Contact" />
     <ContactSection />
   </div>
 );
@@ -125,15 +140,16 @@ const EditPage = () => (
 
 interface LegalPageProps {
   title: string;
+  titleEn?: string;
   description: string;
   descriptionEn: string;
   canonicalPath: string;
   Page: React.ComponentType;
 }
 
-const LegalPage: React.FC<LegalPageProps> = ({ title, description, descriptionEn, canonicalPath, Page }) => (
+const LegalPage: React.FC<LegalPageProps> = ({ title, titleEn, description, descriptionEn, canonicalPath, Page }) => (
   <>
-    <SEO title={title} description={description} descriptionEn={descriptionEn} canonicalPath={canonicalPath} />
+    <SEO title={title} titleEn={titleEn} description={description} descriptionEn={descriptionEn} canonicalPath={canonicalPath} />
     <Page />
   </>
 );
@@ -161,10 +177,11 @@ const AGB_COPY = {
 const MaintenanceBanner = () => {
   // Unbedingt aufgerufen (Hooks-Reihenfolge); der Hook wirft nie (Defaults bei Fehlern).
   const { maintenanceMode } = useRemoteConfigFlags();
+  const { t } = useLanguage();
   if (!maintenanceMode) return null;
   return (
     <div className="bg-yellow-600 text-black text-center text-sm font-bold py-2 px-4">
-      Wartungsmodus – einige Funktionen sind temporär eingeschränkt.
+      {t.home.common.maintenanceMsg}
     </div>
   );
 };
@@ -311,7 +328,7 @@ const LanguagePathSynchronizer = () => {
 const ExternalRedirect = ({ to }: { to: string }) => {
   const { currentUser, loading } = useAuth();
   const { getToken } = useCrossDomainToken();
-  const { language } = useLanguage(); // Get current language to pass it along
+  const { language, t } = useLanguage(); // Get current language to pass it along
 
   React.useEffect(() => {
     // If auth is still loading, wait.
@@ -364,7 +381,7 @@ const ExternalRedirect = ({ to }: { to: string }) => {
       <div className="flex flex-col items-center gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
         <p className="text-gray-400 font-retro tracking-wide animate-pulse">
-            Warping to Sector...
+            {t.home.common.warpingMsg}
         </p>
       </div>
     </div>
@@ -392,6 +409,7 @@ const App: React.FC = () => {
           descriptionEn={copy.en.description}
         />
         <StructuredData type="WebSite" data={{}} />
+        <CategoryH1 de={copy.de.title} en={copy.en.title} />
         <Section />
       </div>
     );
@@ -510,12 +528,12 @@ const App: React.FC = () => {
                   <Route path="/post/:id" element={<PostDetail />} />
                   <Route path="/en/post/:id" element={<PostDetail />} />
 
-                  <Route path="/impressum" element={<LegalPage title="Impressum" canonicalPath="/impressum" Page={Impressum} {...IMPRESSUM_COPY} />} />
-                  <Route path="/en/impressum" element={<LegalPage title="Impressum" canonicalPath="/impressum" Page={Impressum} {...IMPRESSUM_COPY} />} />
-                  <Route path="/datenschutz" element={<LegalPage title="Datenschutz" canonicalPath="/datenschutz" Page={Datenschutz} {...DATENSCHUTZ_COPY} />} />
-                  <Route path="/en/datenschutz" element={<LegalPage title="Datenschutz" canonicalPath="/datenschutz" Page={Datenschutz} {...DATENSCHUTZ_COPY} />} />
-                  <Route path="/agb" element={<LegalPage title="AGB" canonicalPath="/agb" Page={AGB} {...AGB_COPY} />} />
-                  <Route path="/en/agb" element={<LegalPage title="AGB" canonicalPath="/agb" Page={AGB} {...AGB_COPY} />} />
+                  <Route path="/impressum" element={<LegalPage title="Impressum" titleEn="Imprint" canonicalPath="/impressum" Page={Impressum} {...IMPRESSUM_COPY} />} />
+                  <Route path="/en/impressum" element={<LegalPage title="Impressum" titleEn="Imprint" canonicalPath="/impressum" Page={Impressum} {...IMPRESSUM_COPY} />} />
+                  <Route path="/datenschutz" element={<LegalPage title="Datenschutz" titleEn="Privacy Policy" canonicalPath="/datenschutz" Page={Datenschutz} {...DATENSCHUTZ_COPY} />} />
+                  <Route path="/en/datenschutz" element={<LegalPage title="Datenschutz" titleEn="Privacy Policy" canonicalPath="/datenschutz" Page={Datenschutz} {...DATENSCHUTZ_COPY} />} />
+                  <Route path="/agb" element={<LegalPage title="AGB" titleEn="Terms and Conditions" canonicalPath="/agb" Page={AGB} {...AGB_COPY} />} />
+                  <Route path="/en/agb" element={<LegalPage title="AGB" titleEn="Terms and Conditions" canonicalPath="/agb" Page={AGB} {...AGB_COPY} />} />
 
                   <Route path="*" element={<NotFound />} />
                 </Routes>

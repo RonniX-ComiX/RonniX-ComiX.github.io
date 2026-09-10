@@ -12,7 +12,8 @@ import { Link } from 'react-router-dom';
 import { Icon, type IconName } from './icons/Icon';
 import { useLanguage } from '../context/LanguageContext';
 import { localizePath } from '../utils/domainConfig';
-import { versionedAssetUrl } from '../utils/appConfig';
+import { LOGO_IMAGE } from '../utils/imageConfig';
+import { ResponsiveImage } from './ResponsiveImage';
 
 export const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -35,17 +36,15 @@ export const Footer: React.FC = () => {
           {/* Logo & Brand - Side by Side */}
           {/* Hover effect removed */}
           <div className="flex flex-col md:flex-row items-center justify-center gap-5 mb-8 transform-gpu subpixel-antialiased">
-             <div className="relative">
-               {/* Neutraler Logo-Glow (Farb-Disziplin) */}
-               <div className="absolute inset-0 bg-white blur-2xl opacity-20 rounded-full animate-pulse"></div>
-               <img
-                  src={versionedAssetUrl('/images/ronnix_logo.png')}
-                 alt="RonniX Entertainment Logo"
-                 loading="lazy"
-                 decoding="async"
-                 className="h-20 w-auto object-contain relative z-10 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]"
-               />
-             </div>
+              <div className="relative">
+                {/* Neutraler Logo-Glow (Farb-Disziplin) */}
+                <div className="absolute inset-0 bg-white blur-2xl opacity-20 rounded-full animate-pulse"></div>
+                <ResponsiveImage
+                  spec={LOGO_IMAGE}
+                  alt="RonniX Entertainment Logo"
+                  className="h-20 w-auto object-contain relative z-10 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]"
+                />
+              </div>
              <h2 className="text-4xl md:text-5xl font-retro tracking-wider drop-shadow-md">
                {/* Added pr-2 to prevent the 'T' from being clipped by overflow/bounding box */}
                <span className="bg-gradient-to-b from-white via-gray-200 to-neutral-400 bg-clip-text text-transparent pr-2">
@@ -89,7 +88,7 @@ export const Footer: React.FC = () => {
               <Link
                 key={link.name}
                 to={localizePath(link.path, language)}
-                className="flex items-center gap-2 text-gray-500 hover:text-white transition-colors uppercase text-sm font-bold tracking-widest group"
+                className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors uppercase text-sm font-bold tracking-widest group"
               >
                 <Icon name={link.icon} size={16} className="text-neutral-700 group-hover:text-white transition-colors" />
                 {link.name}

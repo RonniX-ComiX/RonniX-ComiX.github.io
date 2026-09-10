@@ -7,6 +7,9 @@ export const home = {
       adminOnly: 'Dieser Bereich ist nur für Administratoren.',
       goHome: 'Zur Startseite',
       notFound: 'Nicht gefunden',
+      notFoundText: 'Diese Seite existiert nicht.',
+      maintenanceMsg: 'Wartungsmodus – einige Funktionen sind temporär eingeschränkt.',
+      warpingMsg: 'Springe zum Sektor...',
       save: 'Speichern',
       saving: 'Speichert...',
       cancel: 'Abbrechen',
@@ -47,18 +50,18 @@ export const home = {
     news: {
       title: 'News & Updates',
       emptyTitle: 'Noch keine Neuigkeiten',
-      emptyDesc: 'Hier erfährst du bald alles über Updates, Events und Ankündigungen.'
+      emptyDesc: 'Noch ist es hier still – sobald es Neuigkeiten aus dem Universum gibt, landen sie zuerst hier.'
     },
     comics: {
       title: 'ComiX',
       emptyTitle: 'Kritik aus der Sprechblase',
-      emptyDesc: 'Hier entsteht mein Blog für Comic-Rezensionen. Ob Superhelden, Graphic Novels oder Manga – bald gibt es hier meine Meinung zu allem, was gedruckt und gezeichnet ist.'
+      emptyDesc: 'Mein Zeichenblock liegt bereit: Hier rezensiere ich bald Superhelden, Graphic Novels und Manga – Panel für Panel, ganz ohne Sammlerfolie.'
     },
     books: {
       title: 'BooX',
       readMore: 'Mehr lesen',
       emptyTitle: 'Frisch aus dem Bücherregal',
-      emptyDesc: 'Meine Bibliothek wird gerade sortiert. In Kürze findest du hier Rezensionen zu Fantasy, Sci-Fi und Nerd-Literatur. Kapitel 1: Die Meinung.'
+      emptyDesc: 'Mein Bücherstapel wächst schneller, als ich lesen kann. Hier folgen in Kürze Rezensionen zu Fantasy, Sci-Fi und Nerd-Literatur.'
     },
     games: {
       title: 'GameZ',
@@ -76,11 +79,11 @@ export const home = {
       title: 'SerieZ',
       badge: 'Serien Review',
       emptyTitle: 'Binge-Watching Modus',
-      emptyDesc: 'Noch keine Episode verfügbar. In Kürze gibt es hier Analysen zu den neuesten Serien-Highlights und zeitlosen Klassikern.'
+      emptyDesc: 'Noch läuft hier der Vorspann: Bald analysiere ich Serien-Highlights und zeitlose Klassiker – von der Pilotfolge bis zum Serienfinale.'
     },
     contact: {
       title: 'Kontaktiere Mich',
-      subtitle: 'Bei Fragen zu meinen Comics, Büchern oder Spielen kannst du dich gerne bei mir melden!',
+      subtitle: 'Ob Comic-Tipp, Buchfrage oder Game-Talk – schreib mir einfach, ich antworte persönlich!',
       nameLabel: 'Name',
       namePlaceholder: 'Dein Name',
       emailLabel: 'E-Mail Adresse',
@@ -94,13 +97,29 @@ export const home = {
       formAutoResponse: 'Vielen Dank für deine Nachricht! Ich werde mich schnellstmöglich melden.',
       thanksTitle: 'Signal empfangen!',
       thanksText: 'Danke für deine Nachricht – das RonniX-Team meldet sich bald bei dir.',
-      backHome: 'Zurück zur Startseite'
+      backHome: 'Zurück zur Startseite',
+      faq: [
+        {
+          q: 'Wie kann ich RonniX Entertainment kontaktieren?',
+          a: 'Über das Kontaktformular auf dieser Seite. Deine Nachricht landet direkt beim RonniX-Team, eine Antwort folgt so schnell wie möglich.'
+        },
+        {
+          q: 'Kann ich selbst kommentieren und mitdiskutieren?',
+          a: 'Ja. Registriere dich kostenlos über den Community-Login, dann kannst du kommentieren, voten und mit anderen Fans diskutieren.'
+        },
+        {
+          q: 'In welchen Sprachen ist die Seite verfügbar?',
+          a: 'Alle Inhalte gibt es auf Deutsch und Englisch. Umschalten kannst du jederzeit über die Flaggen in der Navigation.'
+        }
+      ]
     },
     admin: {
         createTitle: 'Neuen Beitrag erstellen',
         editTitle: 'Beitrag bearbeiten',
         titleLabel: 'Titel',
         titlePlaceholder: 'z.B. Batman: The Long Halloween Review',
+        titlePlaceholderEn: 'e.g. Batman: The Long Halloween Review',
+        contentPlaceholderEn: 'Write your review in English...',
         categoryLabel: 'Kategorie',
         themeLabel: 'Thema / Typ',
         contentLabel: 'Inhalt',
@@ -168,6 +187,7 @@ export const home = {
         noComments: 'Noch keine Kommentare. Sei der Erste!',
         loginToComment: 'Logge dich ein, um mitzudiskutieren!',
         placeholderComment: 'Was denkst du darüber?',
+        replyPlaceholder: 'Antwort schreiben...',
         submitComment: 'Senden',
         loginToVote: 'Login zum Voten',
         comingSoon: 'Demnächst...',
@@ -214,6 +234,7 @@ export const home = {
         submitLink: 'Link setzen',
         imgUrl: 'Bild URL',
         imgAlt: 'Alt Text (Beschreibung)',
+        imgAltPlaceholder: 'Kurzbeschreibung des Bildes',
         width: 'Breite',
         widthFull: '100% (Voll)',
         widthHalf: '50% (Halb)',
@@ -235,6 +256,9 @@ export const home = {
       adminOnly: 'This area is for the site admin only.',
       goHome: 'Go Home',
       notFound: 'Not Found',
+      notFoundText: 'This page does not exist.',
+      maintenanceMsg: 'Maintenance mode – some features are temporarily limited.',
+      warpingMsg: 'Jumping to sector...',
       save: 'Save',
       saving: 'Saving...',
       cancel: 'Cancel',
@@ -275,18 +299,18 @@ export const home = {
     news: {
       title: 'News & Updates',
       emptyTitle: 'No news yet',
-      emptyDesc: 'Stay tuned for updates, events, and announcements.'
+      emptyDesc: 'Still quiet here – as soon as there is news from the universe, it lands here first.'
     },
     comics: {
       title: 'ComiX',
       emptyTitle: 'Critique from the Bubble',
-      emptyDesc: 'My blog for comic reviews is being built here. Whether superheroes, graphic novels, or manga – soon you will find my opinion on everything printed and drawn here.'
+      emptyDesc: 'My sketchbook is ready: soon I will review superheroes, graphic novels and manga here – panel by panel, no collector sleeve.'
     },
     books: {
       title: 'BooX',
       readMore: 'Read More',
       emptyTitle: 'Fresh from the Bookshelf',
-      emptyDesc: 'My library is currently being sorted. Shortly you will find reviews of fantasy, sci-fi, and nerd literature here. Chapter 1: The Opinion.'
+      emptyDesc: 'My book pile grows faster than I can read. Reviews on fantasy, sci-fi and nerd literature follow shortly.'
     },
     games: {
       title: 'GameZ',
@@ -304,11 +328,11 @@ export const home = {
       title: 'SerieZ',
       badge: 'Series Review',
       emptyTitle: 'Binge-Watching Mode',
-      emptyDesc: 'No episode available yet. Analyses of the latest series highlights and timeless classics will appear here shortly.'
+      emptyDesc: 'The opening credits are still rolling: soon I will break down series highlights and timeless classics – from pilot to finale.'
     },
     contact: {
       title: 'Contact Me',
-      subtitle: 'Feel free to contact me with any questions about my comics, books, or games!',
+      subtitle: 'Comic tip, book question or game talk – just write to me, I answer personally!',
       nameLabel: 'Name',
       namePlaceholder: 'Your Name',
       emailLabel: 'Email Address',
@@ -322,13 +346,29 @@ export const home = {
       formAutoResponse: 'Thank you for your message! I will get back to you as soon as possible.',
       thanksTitle: 'Signal received!',
       thanksText: 'Thanks for your message – the RonniX team will get back to you soon.',
-      backHome: 'Back to home'
+      backHome: 'Back to home',
+      faq: [
+        {
+          q: 'How can I contact RonniX Entertainment?',
+          a: 'Use the contact form on this page. Your message goes straight to the RonniX team, and you will get an answer as soon as possible.'
+        },
+        {
+          q: 'Can I comment and join discussions?',
+          a: 'Yes. Register for free via the community login, then you can comment, vote and discuss with other fans.'
+        },
+        {
+          q: 'Which languages is the site available in?',
+          a: 'All content is available in German and English. Switch anytime via the flags in the navigation.'
+        }
+      ]
     },
     admin: {
         createTitle: 'Create New Post',
         editTitle: 'Edit Post',
         titleLabel: 'Title',
         titlePlaceholder: 'e.g. Batman: The Long Halloween Review',
+        titlePlaceholderEn: 'e.g. Batman: The Long Halloween Review',
+        contentPlaceholderEn: 'Write your review in English...',
         categoryLabel: 'Category',
         themeLabel: 'Theme / Type',
         contentLabel: 'Content',
@@ -396,6 +436,7 @@ export const home = {
         noComments: 'No comments yet. Be the first!',
         loginToComment: 'Log in to join the discussion!',
         placeholderComment: 'What are your thoughts?',
+        replyPlaceholder: 'Write a reply...',
         submitComment: 'Submit',
         loginToVote: 'Login to vote',
         comingSoon: 'Coming Soon...',
@@ -442,6 +483,7 @@ export const home = {
         submitLink: 'Insert Link',
         imgUrl: 'Image URL',
         imgAlt: 'Alt Text (Description)',
+        imgAltPlaceholder: 'Brief image description',
         width: 'Width',
         widthFull: '100% (Full)',
         widthHalf: '50% (Half)',

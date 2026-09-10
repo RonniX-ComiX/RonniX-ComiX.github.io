@@ -5,7 +5,8 @@
  * + primärer CTA (`t.home.hero.ctaPrimary` → News, lokalisiert) + `QuickNav`
  * als Sektor-Auswahl (7 Bereiche). Intro-Animation nur beim Erstbesuch je
  * Session (`sessionStorage`).
- * Das Logo trägt echte Maße + `fetchpriority="high"` (LCP).
+ * Das Logo rendert per `ResponsiveImage` (WebP-srcset 640/1024/1600 +
+ * PNG-Fallback, echte Maße, `fetchpriority="high"` als LCP).
  * Benutzung: nur auf `/` der Main-Domain (`App.tsx`). Gehört NICHT hierher:
  * Latest-Posts (`sections/HomeLatestSection.tsx`), Sektor-Sections.
  */
@@ -13,7 +14,8 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { localizePath } from '../utils/domainConfig';
-import { versionedAssetUrl } from '../utils/appConfig';
+import { HERO_IMAGE } from '../utils/imageConfig';
+import { ResponsiveImage } from './ResponsiveImage';
 import { QuickNav } from './QuickNav';
 import { ComicButton } from './ComicButton';
 
@@ -38,17 +40,14 @@ export const Hero: React.FC = () => {
     <header className="relative pt-20 bg-gradient-to-b from-black via-neutral-900/10 to-neutral-950 overflow-hidden flex flex-col items-center justify-center min-h-[60vh]">
       <div className="container mx-auto px-6 relative z-10 flex flex-col items-center w-full max-w-6xl">
 
-        {/* 1. BRANDING: Logo/Image (LCP: echte Maße + hohe Priorität) */}
+        {/* 1. BRANDING: Logo/Image (LCP: WebP-srcset + echte Maße + hohe Priorität) */}
         <div className={`mx-auto mb-8 w-full max-w-4xl relative flex items-center justify-center ${shouldAnimate ? 'animate-fade-in' : ''}`}>
-             <img
-                 src={versionedAssetUrl('/images/RonniX.png')}
-                alt="RonniX Entertainment"
-                width="2192"
-                height="754"
-                fetchPriority="high"
-                decoding="async"
-                className="relative z-10 w-full h-auto max-h-[280px] md:max-h-[400px] object-contain drop-shadow-[0_0_35px_rgba(220,38,38,0.35)]"
-             />
+              <ResponsiveImage
+                 spec={HERO_IMAGE}
+                 alt="RonniX Entertainment"
+                 priority
+                 className="relative z-10 w-full h-auto max-h-[280px] md:max-h-[400px] object-contain drop-shadow-[0_0_35px_rgba(220,38,38,0.35)]"
+              />
         </div>
 
         {/* 2. SLOGAN */}

@@ -54,6 +54,8 @@ googleProvider.setCustomParameters({ prompt: 'select_account' });
 // Abuse-Schutz läuft über Security Rules + serverseitige Functions-Validierung.
 
 // Remote Config: Feature-Flags ohne Redeploy (Cooldown, PageSize, Maintenance)
+// Idle-geladen (nicht im LCP-Fenster): Defaults gelten sofort, Server-Werte
+// werden nach dem First Paint aktiviert (PageSpeed: weniger Mainthread-Last).
 export const remoteConfig = typeof window !== 'undefined' ? getRemoteConfig(app) : null;
 if (remoteConfig) {
   remoteConfig.settings = {
@@ -67,8 +69,13 @@ if (remoteConfig) {
     maintenance_mode: false,
     sitemap_cache_seconds: 3600,
   };
-  // Fire-and-forget: Defaults gelten sofort, Server-Werte beim nächsten Start
-  fetchAndActivate(remoteConfig).catch(() => {});
+  // Fire-and-forget nach Idle: kein Netzwerk im kritischen Pfad.
+  const fetchRemoteConfigIdle = () => fetchAndActivate(remoteConfig).catch(() => {});
+  if (typeof window !== 'undefined' && typeof (window as any).requestIdleCallback === 'function') {
+    (window as any).requestIdleCallback(fetchRemoteConfigIdle, { timeout: 5000 });
+  } else if (typeof window !== 'undefined') {
+    window.setTimeout(fetchRemoteConfigIdle, 2500);
+  }
 }
 
 export default app;

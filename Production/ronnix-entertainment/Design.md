@@ -390,3 +390,44 @@
 - **Einschränkungen:** Firestore-Offline-Cache (managed, kein Key-Eingriff) und
   Remote-Config-Intervall (1h prod) bleiben natürliche Frische-Grenzen;
   ungehashte `public/`-Bilder bei Tausch umbenennen (30d-Cache).
+
+## 14. SEO-/GEO-/Performance-Batch (2026-09-10, PageSpeed-Befunde)
+
+- **Bilder (LCP-Hebel, −2,9 MB):** alle `public/images/*.png` zusätzlich als
+  WebP (`npx webp-image-cli convert`, q80–82): Vollgröße + responsive
+  Varianten (`RonniX-640/1024/1600`, `ronnix_logo-180/360`). PNGs bleiben
+  Fallback (alte Browser, `og:image`-Scraper). `utils/imageConfig.ts` neu
+  (Specs, `srcset`-Builder, Maße, `sizes` — Single Source), `ResponsiveImage`
+  (`components/ResponsiveImage.tsx`, `<picture>` + PNG-Fallback,
+  `priority` nur fürs LCP) eingesetzt in Hero (LCP), Navbar-/Footer-Logo
+  (CLS: echte `width`/`height` 891×838). `COVER_FALLBACK` zeigt auf
+  `preview.webp`. `index.html` prelädt `RonniX-1024.webp` (`imagesrcset`).
+- **CSP/Canonical:** Inline-Canonical-Skript war per CSP geblockt
+  (`script-src 'self'`) → ausgelagert nach `public/canonical.js` (`defer`).
+  `connect-src` bereinigt (`firebase.json`): invalide Quelle
+  `https://europe-west1-*.cloudfunctions.net` (Wildcard nur ganz links
+  erlaubt, Chrome verwarf sie) entfernt — `https://*.cloudfunctions.net`
+  deckt die Functions-Origin ab.
+- **Kritischer Pfad:** Preconnect-Diät (`index.html`: nur Functions +
+  Firestore, Rest `dns-prefetch`, max. 2 statt 6). Remote-Config-`fetch`
+  (`firebase.ts`) und SSO-Silent-Check (`SSOAutoLogin.tsx`) starten erst im
+  Idle (`requestIdleCallback`, Fallbacks 2,5s/1,5s + 4s-Timeout) — Defaults
+  und Guards bleiben synchron, kein Auth-Blitzen.
+- **A11y/SEO-Feinschliff:** `text-gray-500`-Kleinschrift → `neutral-400`
+  (QuickNav, Footer-Legal, MobileDrawer-Sprachlabel, AuthModal-Hinweis);
+  Search-Cover-`alt` nutzt Titel statt `""`; sr-only-H1 je Listen-Seite
+  (`CategoryH1` in `App.tsx`: Kategorien, News, Kontakt); `titleEn` für
+  News + Legal-Routen; `FAQPage`-Schema (`FaqSchema.tsx`) aus
+  `t.home.contact.faq` auf `/contact`; `llms.txt` mit `Last-updated`,
+  Schema- und Sitemap-Hinweisen.
+- **i18n-Lücken geschlossen:** 404, Wartungsbanner, Warp-Text, Reply-,
+  Bild-Alt- und EN-Tab-Placeholders laufen über `locales/home.ts`
+  (neue Keys `common.notFoundText/maintenanceMsg/warpingMsg`,
+  `postDetail.replyPlaceholder`, `editor.imgAltPlaceholder`,
+  `admin.titlePlaceholderEn/contentPlaceholderEn`).
+- **Stimme:** `emptyDesc` (News/ComiX/BooX/SerieZ) + Kontakt-Sub ent-templaten
+  (je Sektor eigene Stimme statt 5× „bald gibt es hier“); Fakten unverändert.
+- **Einschränkungen:** Firebase-Auth bleibt eager (First Paint wartet bewusst
+  auf Auth — kein Gast→User-Blitzen, CLS-Budget 0); Voll-SSG weiter Backlog
+  (`docs/PRERENDER.md`); Admin-`PostMetaFields`-Platzhalter bewusst
+  unlokalisiert (internes Werkzeug, EN-Beispiele sind Fachbegriffe).
